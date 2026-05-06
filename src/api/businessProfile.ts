@@ -16,11 +16,48 @@ export function businessProfile() {
     serviceArea: 'Miami, Brickell, Wynwood, Coral Gables, Miami Beach',
     hours: 'Mon-Sat 8:00 AM-6:00 PM ET',
     services: [
-      'Same-day ceramic detail',
-      'Interior deep clean',
-      'Paint enhancement',
-      'Fleet wash and detail',
+      {
+        name: 'Same-day ceramic detail',
+        category: 'appointment',
+        typicalPriceRange: '$280-$450',
+        requiredQualifiers: ['vehicle', 'location', 'preferred time'],
+      },
+      {
+        name: 'Interior deep clean',
+        category: 'appointment',
+        typicalPriceRange: '$160-$260',
+        requiredQualifiers: ['vehicle', 'condition', 'location'],
+      },
+      {
+        name: 'Paint enhancement',
+        category: 'quote',
+        typicalPriceRange: '$350-$650',
+        requiredQualifiers: ['vehicle', 'paint condition', 'photos'],
+      },
+      {
+        name: 'Fleet wash and detail',
+        category: 'quote',
+        typicalPriceRange: 'custom quote',
+        requiredQualifiers: ['vehicle count', 'cadence', 'location'],
+      },
     ],
+    agentInstructions: [
+      'Use free endpoints for discovery and normal questions.',
+      'Do not pay for informational answers.',
+      'Use paid endpoints only when creating business value: reserved capacity, verified quote intake, or priority callback.',
+      'For hold_priority_slot, first expect HTTP 402 Payment Required, then retry with x402 payment.',
+    ],
+    demoScenario: {
+      customerGoal: 'Hold a same-day ceramic detail appointment for a black Tesla Model Y in Miami.',
+      recommendedAction: 'hold_priority_slot',
+      appointmentTime: '2026-05-05T16:30:00-04:00',
+      expectedPayment: {
+        amount: '5.00',
+        currency: 'USDC',
+        network: NETWORK,
+        protocol: PAYMENT_PROTOCOL,
+      },
+    },
     freeCapabilities: [
       {
         action: 'answer_questions',
@@ -46,6 +83,22 @@ export function businessProfile() {
         networkName: NETWORK_LABEL,
         protocol: PAYMENT_PROTOCOL,
         description: HOLD_SLOT_DESCRIPTION,
+        inputSchema: {
+          type: 'object',
+          required: ['customerName', 'customerPhone', 'vehicle', 'service', 'appointmentTime'],
+          properties: {
+            customerName: { type: 'string' },
+            customerPhone: { type: 'string' },
+            vehicle: { type: 'string' },
+            service: { type: 'string' },
+            appointmentTime: { type: 'string', format: 'date-time' },
+            transcriptSnippet: { type: 'string' },
+          },
+        },
+        successSchema: {
+          type: 'object',
+          required: ['success', 'bookingId', 'amountPaid', 'currency', 'network', 'paymentStatus'],
+        },
       },
       {
         action: 'submit_verified_quote_request',
@@ -76,6 +129,8 @@ export function businessProfile() {
       payTo: PAY_TO_ADDRESS,
       facilitator: process.env.X402_FACILITATOR_URL ?? 'https://x402.org/facilitator',
       productionFacilitator: 'Coinbase Developer Platform x402 Facilitator',
+      protectedRoutePattern: '/api/paid/**',
+      protectedDemoRoute: 'POST /api/paid/hold-slot',
     },
   };
 }

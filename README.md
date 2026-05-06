@@ -39,6 +39,25 @@ AgentPay Receptionist gives the business:
 - x402-paid action endpoints for scarce or valuable business actions.
 - A dashboard that shows paid leads, payment status, transcript snippets, and x402 event logs.
 
+## Judge-Ready Thesis
+
+In the old internet, businesses needed websites. In the agentic internet, businesses need payable endpoints.
+
+AgentPay Receptionist is not a chatbot with a payment button. It is a local-business capability server:
+
+- Agents discover what the business can do through `GET /api/agent/business-profile`.
+- Free questions and qualification stay free.
+- Paid business actions live under `/api/paid/**`.
+- `POST /api/paid/hold-slot` proves the key pattern: HTTP request, `402 Payment Required`, x402 payment, verified action, dashboard lead.
+
+The demo should be understandable in under 60 seconds:
+
+1. Open **Agent API Simulator**.
+2. Click **Discover profile** to show the machine-readable endpoint.
+3. Click **Attempt hold** to show HTTP 402 and x402 payment requirements.
+4. Click **Sign x402 and book** or run the agent buyer CLI.
+5. Open **Dashboard** to show the paid lead and event log.
+
 ## Demo Business
 
 The MVP business is **Miami Elite Auto Detail**.
@@ -266,16 +285,18 @@ aws ssm put-parameter \
   --overwrite
 ```
 
-## AI Receptionist Behavior11
+## AI Receptionist Behavior
 
-The MVP uses a deterministic flow for demo reliability:
+The MVP uses a deterministic but structured receptionist flow for demo reliability:
 
 - Greets as the AI front desk, not a human.
 - Answers normal informational questions for free.
 - Asks one qualifying question at a time.
 - Offers a 4:30 PM priority hold for same-day ceramic detail requests.
 - Requires payment only for appointment holds, verified quote requests, and priority callbacks.
-- Returns structured chat fields: `reply`, `intent`, `requiresPayment`, `paidAction`, and `leadFields`.
+- Returns structured chat fields: `reply`, `intent`, `confidence`, `actionBoundary`, `requiresPayment`, `paidAction`, `suggestedNextStep`, `agentInstructions`, and `leadFields`.
+
+The code avoids a fake-feeling “yes means pay” shortcut. It qualifies service and vehicle first, then only marks payment required when the user or agent explicitly asks to reserve capacity.
 
 The code is ready for optional LLM polish, but the judged payment flow does not depend on a live model call.
 

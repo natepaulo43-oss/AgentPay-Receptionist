@@ -1,0 +1,21 @@
+export declare const BUSINESS_ID = "miami-elite-auto-detail";
+export declare const BUSINESS_NAME = "Miami Elite Auto Detail";
+export declare const NETWORK: string;
+export declare const NETWORK_LABEL: string;
+export declare const PAYMENT_PROTOCOL = "x402";
+export declare const PAY_TO_ADDRESS: string;
+export declare const TABLE_NAME: string | undefined;
+export declare const ALLOW_UNVERIFIED_PAYMENT_HEADERS: boolean;
+export declare const MAX_BODY_BYTES: number;
+export declare const CHAT_RATE_LIMIT = 30;
+export declare const CHAT_RATE_WINDOW_MS: number;
+export declare const HOLD_SLOT_PRICE = "5.00";
+export declare const HOLD_SLOT_AMOUNT_ATOMIC = "5000000";
+export declare const HOLD_SLOT_DESCRIPTION = "Hold a priority appointment slot with a local business receptionist.";
+export declare const APPOINTMENT_TIME = "2026-05-05T16:30:00-04:00";
+export declare const USDC_ASSET_ADDRESS: string;
+export declare const USDC_ASSET_NAME: string;
+export declare const USDC_ASSET_VERSION: string;
+export declare function nowIso(): string;
+export declare function makeId(prefix: string): string;
+//# sourceMappingURL=config.d.ts.map
