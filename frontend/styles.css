@@ -2714,7 +2714,7 @@ th {
 .sim-product-body {
   display: grid;
   grid-template-columns: 280px 1fr;
-  min-height: 560px;
+  height: 560px;
 }
 
 /* Timeline sidebar */
@@ -2723,6 +2723,8 @@ th {
   padding: 22px 18px;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .sim-step {
@@ -2813,6 +2815,7 @@ th {
   flex-direction: column;
   overflow: hidden;
   border-left: none;
+  min-height: 0;
 }
 
 .sim-console-topbar {
@@ -2849,6 +2852,21 @@ th {
 }
 
 .sim-api-block:last-child { border-bottom: none; }
+
+@keyframes slideInBlock {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sim-api-block:last-child {
+  animation: slideInBlock 0.30s ease-out both;
+}
 
 .sim-api-block-header {
   display: flex;
@@ -2975,6 +2993,11 @@ th {
 
   .sim-product-body {
     grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .sim-console-body {
+    max-height: 420px;
   }
 
   .sim-timeline-col {
@@ -2997,7 +3020,11 @@ th {
   }
 
   .sim-product-body {
-    min-height: auto;
+    height: auto;
+  }
+
+  .sim-console-body {
+    max-height: 360px;
   }
 }
 

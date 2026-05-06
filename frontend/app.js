@@ -471,7 +471,7 @@ async function runSimulation() {
     state.simStep = i + 1;
     render();
     const consoleEl = document.querySelector('#simConsole');
-    if (consoleEl) consoleEl.scrollTop = consoleEl.scrollHeight;
+    if (consoleEl) consoleEl.scrollTo({ top: consoleEl.scrollHeight, behavior: 'smooth' });
   }
   state.simRunning = false;
   render();
