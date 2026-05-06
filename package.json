@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "dev": "node demo/local-server.mjs",
     "dev:demo": "node demo/local-server.mjs",
     "agent:pay": "node scripts/agent-pay-hold-slot.mjs",
     "sam:validate": "sam validate --region us-east-1",
