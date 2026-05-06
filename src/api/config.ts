@@ -6,6 +6,8 @@ export const PAYMENT_PROTOCOL = 'x402';
 export const PAY_TO_ADDRESS =
   process.env.PAY_TO_ADDRESS ?? '0x0000000000000000000000000000000000000402';
 export const TABLE_NAME = process.env.AGENTPAY_TABLE_NAME ?? process.env.TABLE_NAME;
+export const ALLOW_UNVERIFIED_PAYMENT_HEADERS =
+  process.env.AGENTPAY_ALLOW_UNVERIFIED_PAYMENT_HEADERS === 'true';
 export const MAX_BODY_BYTES = 50 * 1024;
 export const CHAT_RATE_LIMIT = 30;
 export const CHAT_RATE_WINDOW_MS = 60 * 1000;

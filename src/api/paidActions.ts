@@ -15,6 +15,7 @@ import {
   USDC_ASSET_ADDRESS,
   USDC_ASSET_NAME,
   USDC_ASSET_VERSION,
+  ALLOW_UNVERIFIED_PAYMENT_HEADERS,
   makeId,
   nowIso,
 } from './config';
@@ -172,9 +173,15 @@ function paymentRequiredResponse(event: APIGatewayProxyEvent, origin?: string): 
 }
 
 function hasVerifiedPayment(headers: Record<string, string>): boolean {
+  if (headers['x-x402-pending-settlement'] || headers['x-payment-response']) {
+    return true;
+  }
+
+  if (!ALLOW_UNVERIFIED_PAYMENT_HEADERS) {
+    return false;
+  }
+
   return Boolean(
-      headers['x-x402-pending-settlement'] ||
-      headers['x-payment-response'] ||
       headers['payment-signature'] ||
       headers['x-payment'],
   );
@@ -182,6 +189,6 @@ function hasVerifiedPayment(headers: Record<string, string>): boolean {
 
 function paymentStatusFor(headers: Record<string, string>): PaymentStatus {
   if (headers['x-x402-pending-settlement'] || headers['x-payment-response']) return 'settled';
-  if (headers['payment-signature'] || headers['x-payment']) return 'verified';
+  if (ALLOW_UNVERIFIED_PAYMENT_HEADERS && (headers['payment-signature'] || headers['x-payment'])) return 'verified';
   return 'simulated';
 }

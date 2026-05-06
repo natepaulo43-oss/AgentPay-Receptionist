@@ -589,6 +589,14 @@ button:disabled {
   background: #09111d;
 }
 
+.code-card.compact-code {
+  min-height: 0;
+}
+
+.compact-code pre {
+  max-height: 220px;
+}
+
 .code-title {
   display: flex;
   align-items: center;

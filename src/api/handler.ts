@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { businessProfile } from './businessProfile';
-import { chatResponseFor, enforceChatRateLimit } from './chat';
+import { chatResponseFor, enforceChatRateLimit, parseConversationHistory } from './chat';
 import { BUSINESS_NAME, NETWORK, PAYMENT_PROTOCOL, TABLE_NAME, nowIso } from './config';
 import { isAllowedOrigin, json, lowerHeaders, parseJsonBody, stringField } from './http';
 import { handleHoldSlot, handlePaidStub } from './paidActions';
@@ -39,7 +39,10 @@ async function route(event: APIGatewayProxyEvent, origin?: string): Promise<APIG
     if (!message) {
       return json(400, { error: 'message is required.' }, origin);
     }
-    return json(200, chatResponseFor(message), origin);
+    return json(200, chatResponseFor({
+      message,
+      conversationHistory: parseConversationHistory(body.conversationHistory),
+    }), origin);
   }
 
   if (path === '/api/paid/hold-slot' && method === 'POST') {

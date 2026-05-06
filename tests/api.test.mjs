@@ -20,19 +20,41 @@ test('GET /api/agent/business-profile exposes free and paid capabilities', async
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.name, 'Miami Elite Auto Detail');
   assert.equal(response.body.payment.protocol, 'x402');
+  assert.equal(response.body.payment.protectedDemoRoute, 'POST /api/paid/hold-slot');
+  assert.ok(Array.isArray(response.body.agentInstructions));
   assert.ok(response.body.paidCapabilities.some((capability) => capability.endpoint === '/api/paid/hold-slot'));
 });
 
-test('POST /api/chat keeps questions free and marks real holds as paid actions', async () => {
+test('POST /api/chat keeps questions free and avoids premature payment asks', async () => {
   const freeQuestion = await callApi('/api/chat', 'POST', { message: 'What hours are you open?' });
   assert.equal(freeQuestion.statusCode, 200);
   assert.equal(freeQuestion.body.requiresPayment, false);
 
+  const blindAffirmation = await callApi('/api/chat', 'POST', { message: 'yes' });
+  assert.equal(blindAffirmation.statusCode, 200);
+  assert.equal(blindAffirmation.body.requiresPayment, false);
+  assert.notEqual(blindAffirmation.body.intent, 'hold_priority_slot');
+});
+
+test('POST /api/chat qualifies before turning a hold into a paid business action', async () => {
+  const qualifyVehicle = await callApi('/api/chat', 'POST', {
+    message: 'I need a same-day ceramic detail appointment in Miami.',
+    conversationHistory: [],
+  });
+  assert.equal(qualifyVehicle.statusCode, 200);
+  assert.equal(qualifyVehicle.body.requiresPayment, false);
+  assert.equal(qualifyVehicle.body.actionBoundary, 'qualification');
+
   const holdRequest = await callApi('/api/chat', 'POST', {
     message: 'It is a black Tesla Model Y. Please hold the 4:30 slot.',
+    conversationHistory: [
+      { role: 'user', text: 'I need a same-day ceramic detail appointment in Miami.' },
+      { role: 'assistant', text: qualifyVehicle.body.reply },
+    ],
   });
   assert.equal(holdRequest.statusCode, 200);
   assert.equal(holdRequest.body.requiresPayment, true);
+  assert.equal(holdRequest.body.actionBoundary, 'paid_business_action');
   assert.equal(holdRequest.body.paidAction.endpoint, '/api/paid/hold-slot');
 });
 
@@ -46,16 +68,24 @@ test('POST /api/paid/hold-slot returns HTTP 402 without x402 payment', async () 
   assert.ok(response.headers['Payment-Required']);
 });
 
-test('paid hold-slot creates booking JSON plus dashboard lead and payment records', async () => {
+test('hold-slot rejects spoofed payment signatures unless the AWS edge verified payment first', async () => {
   await callApi('/api/dashboard/reset', 'POST');
   const response = await callApi('/api/paid/hold-slot', 'POST', demoPayload, {
     'PAYMENT-SIGNATURE': 'test-browser-signed-x402-payment-payload',
+  });
+  assert.equal(response.statusCode, 402);
+});
+
+test('edge-verified hold-slot creates booking JSON plus dashboard lead and payment records', async () => {
+  await callApi('/api/dashboard/reset', 'POST');
+  const response = await callApi('/api/paid/hold-slot', 'POST', demoPayload, {
+    'x-x402-pending-settlement': 'edge-verified-payment-payload',
   });
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
   assert.equal(response.body.action, 'hold_slot');
   assert.equal(response.body.amountPaid, '5.00');
-  assert.equal(response.body.paymentStatus, 'verified');
+  assert.equal(response.body.paymentStatus, 'settled');
   assert.deepEqual(
     response.body.timeline.map((event) => event.status),
     [

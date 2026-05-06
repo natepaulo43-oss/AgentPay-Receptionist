@@ -29,6 +29,7 @@ const state = {
     },
   ],
   pendingPaidAction: null,
+  lastChatDecision: null,
   timeline: [],
   requestJson: null,
   responseJson: null,
@@ -381,6 +382,14 @@ async function sendChatMessage(message) {
     if (result.ok) {
       state.chatMessages.push({ role: 'assistant', text: result.body.reply });
       state.pendingPaidAction = result.body.requiresPayment ? result.body.paidAction : null;
+      state.lastChatDecision = {
+        intent: result.body.intent,
+        actionBoundary: result.body.actionBoundary,
+        requiresPayment: result.body.requiresPayment,
+        confidence: result.body.confidence,
+        suggestedNextStep: result.body.suggestedNextStep,
+        leadFields: result.body.leadFields,
+      };
     } else {
       state.chatMessages.push({ role: 'assistant', text: result.body.error || 'The receptionist API returned an error.' });
     }
@@ -429,6 +438,21 @@ async function resetDashboard() {
   } finally {
     setBusy(false);
   }
+}
+
+function chatDecisionMarkup() {
+  if (!state.lastChatDecision) {
+    return '<div class="empty">Structured receptionist decisions will appear after the next message.</div>';
+  }
+  return `
+    <div class="code-card compact-code">
+      <div class="code-title">
+        <span>Receptionist decision JSON</span>
+        <span>${escapeHtml(state.lastChatDecision.actionBoundary || '')}</span>
+      </div>
+      <pre>${escapeHtml(pretty(state.lastChatDecision))}</pre>
+    </div>
+  `;
 }
 
 function landingPage() {
@@ -520,6 +544,7 @@ function chatPage() {
             </div>
             <div class="panel-body stack">
               <p class="small">The receptionist only charges when the customer asks for a value-creating action such as reserving appointment capacity.</p>
+              ${chatDecisionMarkup()}
               ${state.pendingPaidAction ? `
                 <div class="capability">
                   <strong>${state.pendingPaidAction.endpoint}</strong>

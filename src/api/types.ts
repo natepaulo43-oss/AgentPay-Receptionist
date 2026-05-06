@@ -54,6 +54,8 @@ export interface ChatResponse {
   reply: string;
   intent: string;
   requiresPayment: boolean;
+  confidence: number;
+  actionBoundary: 'free_information' | 'qualification' | 'paid_business_action';
   paidAction: null | {
     type: PaidActionType;
     endpoint: string;
@@ -63,6 +65,8 @@ export interface ChatResponse {
     protocol: 'x402';
     reason: string;
   };
+  suggestedNextStep: string;
+  agentInstructions: string;
   leadFields: Record<string, string | null>;
 }
 
