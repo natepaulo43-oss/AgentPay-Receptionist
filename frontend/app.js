@@ -15,7 +15,7 @@ const demoPayload = {
   service: 'Same-day ceramic detail',
   request: 'Hold a same-day ceramic detail appointment at 4:30 PM.',
   appointmentTime: '2026-05-05T16:30:00-04:00',
-  transcriptSnippet: 'Autonomous agent requested a same-day ceramic detail and accepted the $5 x402 priority hold.',
+  transcriptSnippet: 'Autonomous agent requested a same-day ceramic detail and accepted the $0.50 x402 priority hold.',
 };
 
 const AGENT_BUYER_COMMAND = 'X402_BUYER_PRIVATE_KEY=0x... AGENTPAY_BASE_URL=http://127.0.0.1:8787 npm run agent:pay';
@@ -164,7 +164,7 @@ function technicalPanels() {
 
 function show402Moment() {
   return state.lastHttpStatus === 402
-    ? '<div class="http-402">HTTP 402 Payment Required. $5 USDC required. Network: Base Sepolia. Protocol: x402.</div>'
+    ? '<div class="http-402">HTTP 402 Payment Required. $0.50 USDC required. Network: Base Sepolia. Protocol: x402.</div>'
     : '';
 }
 
@@ -493,7 +493,7 @@ function simCodeContent(step) {
   if (step === 0) {
     return `<div class="sim-idle">
       <div class="sim-idle-icon">◈</div>
-      <p class="sim-idle-text">Click <strong>Run Simulation</strong> to watch an autonomous agent discover the business, hit HTTP 402, pay $5 USDC on Base Sepolia, and receive a structured booking confirmation.</p>
+      <p class="sim-idle-text">Click <strong>Run Simulation</strong> to watch an autonomous agent discover the business, hit HTTP 402, pay $0.50 USDC on Base Sepolia, and receive a structured booking confirmation.</p>
     </div>`;
   }
   const blocks = [];
@@ -521,7 +521,7 @@ Content-Type: application/json
       {
         "action":   "hold_slot",
         "endpoint": "POST /api/bookings/hold",
-        "price":    "5.00 USDC",
+        "price":    "0.50 USDC",
         "network":  "eip155:84532",
         "protocol": "x402"
       }
@@ -557,7 +557,7 @@ X-402-Version: 2
       "network":           "eip155:84532",
       "asset":             "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "payTo":             "0xBusiness...Wallet",
-      "amount":            "5000000",
+      "amount":            "500000",
       "decimals":          6,
       "symbol":            "USDC",
       "maxTimeoutSeconds": 300
@@ -587,7 +587,7 @@ X-PAYMENT: eyJ4NDAyVmVyc2lvbiI6MiwicmVzb3VyY2Ui...
     "authorization": {
       "from":        "0xAgent...Wallet",
       "to":          "0xBusiness...Wallet",
-      "value":       "5000000",
+      "value":       "500000",
       "validAfter":  "1746547200",
       "validBefore": "1746547500",
       "nonce":       "0xa3f9b2c1d4e5f6..."
@@ -609,7 +609,7 @@ HTTP/1.1 200 OK
   "isValid":   true,
   "txHash":    "0x7b3c4d5e6f7a8b9c...",
   "network":   "eip155:84532",
-  "amount":    "5000000",
+  "amount":    "500000",
   "settledAt": "2026-05-06T20:30:01.443Z"
 }`));
 
@@ -622,7 +622,7 @@ Content-Type: application/json
   "business_name":     "Miami Elite Auto Detail",
   "service":           "Same-day ceramic detail",
   "requested_time":    "2026-05-06T16:30:00-04:00",
-  "amount":            "5.00",
+  "amount":            "0.50",
   "currency":          "USDC",
   "network":           "eip155:84532",
   "payment_status":    "settled",
@@ -712,7 +712,7 @@ function landingPage() {
                 <span class="flow-line-text">HTTP 402 Payment Required</span>
               </div>
               <div class="flow-line data">
-                <span class="flow-line-text">amount: "5000000" (5.00 USDC)</span>
+                <span class="flow-line-text">amount: "500000" (0.50 USDC)</span>
               </div>
               <div class="flow-line data">
                 <span class="flow-line-text">network: "eip155:84532"</span>
@@ -738,7 +738,7 @@ function landingPage() {
                 <pre>{
   "bookingId":     "lead_a3f9b2c1",
   "service":       "Same-day ceramic detail",
-  "amountPaid":    "5.00",
+  "amountPaid":    "0.50",
   "currency":      "USDC",
   "paymentStatus": "settled"
 }</pre>
@@ -770,9 +770,9 @@ function landingPage() {
           <p>Autonomous agents discover, qualify, and pay in a single request cycle — no registration, no OAuth, no session management required.</p>
         </div>
         <div class="card">
-          <div class="metric">$5</div>
+          <div class="metric">$0.50</div>
           <h3>Demo payment amount</h3>
-          <p>A $5 USDC deposit gates the priority appointment hold on <span class="mono" style="font-size:0.85em">POST /api/paid/hold-slot</span>, paid, verified, and confirmed in the same round trip.</p>
+          <p>A $0.50 USDC deposit gates the priority appointment hold on <span class="mono" style="font-size:0.85em">POST /api/paid/hold-slot</span>, paid, verified, and confirmed in the same round trip.</p>
         </div>
         <div class="card">
           <div class="metric">1</div>
@@ -886,7 +886,7 @@ function chatPage() {
         </div>
         <div class="chat-hero-badges">
           <span class="protocol-badge x402">x402</span>
-          <span class="protocol-badge usdc">$5 USDC</span>
+          <span class="protocol-badge usdc">$0.50 USDC</span>
           <span class="protocol-badge network">Base Sepolia</span>
         </div>
       </div>
@@ -909,7 +909,7 @@ function chatPage() {
             <div class="chat-window-logo">ME</div>
             <div class="chat-window-info">
               <strong>Miami Elite Auto Detail</strong>
-              <small>AI Receptionist · Free questions · Priority holds from $5 USDC</small>
+              <small>AI Receptionist · Free questions · Priority holds from $0.50 USDC</small>
             </div>
             <span class="status-pill live">Live</span>
           </div>
@@ -925,7 +925,7 @@ function chatPage() {
               <div class="chat-state-banner intent">Booking intent detected — qualifying customer details</div>
             ` : ''}
             ${chatState === 'payment' ? `
-              <div class="chat-state-banner payment">Paid action ready — priority hold requires $5 USDC via x402</div>
+              <div class="chat-state-banner payment">Paid action ready — priority hold requires $0.50 USDC via x402</div>
             ` : ''}
           </div>
 
@@ -1048,7 +1048,7 @@ function chatPage() {
 
       <div class="cta-section">
         <h2>The human and agent paths meet at the same endpoint.</h2>
-        <p>Watch an autonomous agent skip the chat window entirely — discover the business, trigger HTTP 402, pay $5 USDC via x402, and receive structured booking JSON.</p>
+        <p>Watch an autonomous agent skip the chat window entirely — discover the business, trigger HTTP 402, pay $0.50 USDC via x402, and receive structured booking JSON.</p>
         <div class="hero-actions" style="justify-content:center; margin-top:0;">
           <a class="primary" href="#/simulator">Open API Simulator</a>
           <a class="secondary" href="#/dashboard">View Dashboard</a>
@@ -1116,7 +1116,7 @@ function simulatorPage() {
       <div style="width: min(860px, calc(100% - 36px)); margin: 0 auto;">
         <p class="eyebrow">API Simulator · Autonomous Agent · Base Sepolia · x402 v2</p>
         <h1 class="sim-hero-title">Watch an agent pay for a real-world action.</h1>
-        <p class="sim-hero-copy">An autonomous agent discovers Miami Elite Auto Detail, requests a booking hold, hits HTTP 402, pays $5 USDC via x402, and receives a structured booking confirmation — no checkout page, no form, no human.</p>
+        <p class="sim-hero-copy">An autonomous agent discovers Miami Elite Auto Detail, requests a booking hold, hits HTTP 402, pays $0.50 USDC via x402, and receives a structured booking confirmation — no checkout page, no form, no human.</p>
         <div style="display:flex; align-items:center; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
           <button class="run-sim-btn" type="button" data-run-sim ${state.simRunning ? 'disabled' : ''}>${btnLabel}</button>
           ${state.simStep > 0 && !state.simRunning ? `<button class="secondary" type="button" data-reset-sim style="height:54px; padding:0 22px;">Reset</button>` : ''}
@@ -1176,7 +1176,7 @@ function simulatorPage() {
                 <div style="font-size:0.62rem; font-weight:800; color:#4ade80; letter-spacing:0.10em; text-transform:uppercase; margin-bottom:8px;">Payment verified</div>
                 <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--on-dark-muted); line-height:1.7;">
                   <div>network: eip155:84532</div>
-                  <div>amount:  5.00 USDC</div>
+                  <div>amount:  0.50 USDC</div>
                   <div>status:  settled</div>
                   <div style="color:#4ade80; margin-top:4px;">id: booking_a3f9b2c1</div>
                 </div>
@@ -1206,7 +1206,7 @@ function simulatorPage() {
               </div>
               <div class="sim-payment-field">
                 <span class="sim-payment-field-label">Amount</span>
-                <span class="sim-payment-field-value">5.00 USDC</span>
+                <span class="sim-payment-field-value">0.50 USDC</span>
               </div>
               <div class="sim-payment-field">
                 <span class="sim-payment-field-label">Protocol</span>
@@ -1258,7 +1258,7 @@ function simulatorPage() {
                   <span class="runbook-num">03</span>
                   <span class="runbook-label">
                     <strong>Sign x402 and book</strong>
-                    <small>Pay $5 USDC, verify on-chain, receive booking JSON</small>
+                    <small>Pay $0.50 USDC, verify on-chain, receive booking JSON</small>
                   </span>
                   <span class="method-badge pay">USDC</span>
                 </button>
@@ -1305,7 +1305,7 @@ function dashboardPage() {
   const hasLiveData = state.leads.length > 0 || state.payments.length > 0;
   const metricPaidActions = hasLiveData ? state.payments.length : 12;
   const metricLeads = hasLiveData ? state.leads.length : 8;
-  const metricRevenueValue = hasLiveData ? '$' + (state.payments.length * 5) : '$60';
+  const metricRevenueValue = hasLiveData ? '$' + (state.payments.length * 0.5).toFixed(2) : '$6';
   const metricPending = hasLiveData ? state.leads.length : 3; // demo: 3 of 4 DEMO_BOOKINGS are non-booked (captured, awaiting, confirm)
 
   const DEMO_BOOKINGS = [
@@ -1407,7 +1407,7 @@ function dashboardPage() {
     {
       time: '10:43 AM',
       title: 'USDC payment verified',
-      desc: '$5.00 USDC settled on Base Sepolia · eip155:84532 · x402 v2.',
+      desc: '$0.50 USDC settled on Base Sepolia · eip155:84532 · x402 v2.',
       badge: 'verified',
       badgeLabel: 'Verified',
     },
@@ -1601,7 +1601,7 @@ function dashboardPage() {
             <div class="dash-verify-fields">
               <div class="dash-verify-row">
                 <span class="dash-verify-label">Amount</span>
-                <span class="dash-verify-value verified">$5.00 USDC</span>
+                <span class="dash-verify-value verified">$0.50 USDC</span>
               </div>
               <div class="dash-verify-row">
                 <span class="dash-verify-label">Network</span>
@@ -1650,7 +1650,7 @@ function miamiPage() {
     businessName: 'Miami Elite Auto Detail',
     service: 'Same-day ceramic detail',
     appointmentTime: '2026-05-05T16:30:00-04:00',
-    amountPaid: '5.00',
+    amountPaid: '0.50',
     currency: 'USDC',
     network: 'eip155:84532',
     paymentStatus: 'settled',
@@ -1663,7 +1663,7 @@ function miamiPage() {
       <div class="hero-inner">
         <p class="eyebrow">Use Case · Miami, Florida · Base Sepolia</p>
         <h1>Miami Elite Auto Detail,<br>now callable by humans<br>and payable by agents.</h1>
-        <p class="hero-copy">A normal customer chats with the AI receptionist for free. An autonomous AI agent discovers services, requests a booking hold, pays $5 USDC over x402, and receives structured confirmation JSON — no human needed.</p>
+        <p class="hero-copy">A normal customer chats with the AI receptionist for free. An autonomous AI agent discovers services, requests a booking hold, pays $0.50 USDC over x402, and receives structured confirmation JSON — no human needed.</p>
         <div class="hero-actions">
           <a class="primary" href="#/simulator">Open API Simulator</a>
           <a class="secondary" href="#/chat">Try Customer Chat</a>
@@ -1696,13 +1696,13 @@ function miamiPage() {
       <div class="section-header" style="margin-top: 52px;">
         <p class="eyebrow">Services</p>
         <h2>What Miami Elite Auto Detail offers</h2>
-        <p>Free endpoints handle discovery and questions. Priority appointment holds require a $5 USDC deposit via x402.</p>
+        <p>Free endpoints handle discovery and questions. Priority appointment holds require a $0.50 USDC deposit via x402.</p>
       </div>
       <div class="grid three">
         <div class="service-card">
           <p class="service-card-name">Same-day ceramic detail</p>
           <p class="service-card-detail">Interior and exterior ceramic treatment for any vehicle class. Priority same-day slots require a hold deposit.</p>
-          <span class="service-card-price">from $250 · Priority hold: 5.00 USDC</span>
+          <span class="service-card-price">from $250 · Priority hold: 0.50 USDC</span>
         </div>
         <div class="service-card">
           <p class="service-card-name">Full ceramic coating</p>
@@ -1782,7 +1782,7 @@ function miamiPage() {
             </div>
             <div class="path-step">
               <span class="path-step-num">3</span>
-              <span>Receptionist offers the 4:30 PM priority hold for a $5 USDC deposit</span>
+              <span>Receptionist offers the 4:30 PM priority hold for a $0.50 USDC deposit</span>
             </div>
             <div class="path-step">
               <span class="path-step-num">4</span>
@@ -1910,7 +1910,7 @@ function miamiPage() {
             <span class="protocol-badge http-402">POST /api/paid/hold-slot</span>
           </div>
           <h3>Same-day ceramic detail hold</h3>
-          <p>Reserve a priority appointment slot for same-day service. $5 USDC · x402 v2 · Base Sepolia. Fully implemented in this demo.</p>
+          <p>Reserve a priority appointment slot for same-day service. $0.50 USDC · x402 v2 · Base Sepolia. Fully implemented in this demo.</p>
         </div>
         <div class="feature-card" style="opacity: 0.55;">
           <div style="margin-bottom: 12px;">
