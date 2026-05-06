@@ -263,7 +263,7 @@ function proofEvidenceMarkup() {
           state.profile ? 'HTTP 200' : 'Not run yet',
           state.profile
             ? `${state.profile.name} returned ${state.profile.paidCapabilities?.length || 0} paid capabilities.`
-            : 'Run discovery or open the buyer CLI to fetch the machine-readable profile.',
+            : 'Run discovery or open the buyer CLI to fetch the machine readable profile.',
           state.profile ? 'ok' : 'pending',
         )}
         ${proofCard(
