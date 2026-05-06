@@ -1,1 +1,0 @@
-{"version":3,"file":"to-lambda-response.d.ts","sourceRoot":"","sources":["../../../../src/edge/shared/to-lambda-response.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,wBAAwB,EAAE,MAAM,YAAY,CAAC;AAI3D,wBAAgB,gBAAgB,CAC9B,YAAY,EAAE;IAAE,MAAM,EAAE,MAAM,CAAC;IAAC,OAAO,EAAE,MAAM,CAAC,MAAM,EAAE,MAAM,CAAC,CAAC;IAAC,IAAI,CAAC,EAAE,OAAO,CAAA;CAAE,GAChF,wBAAwB,CA8B1B"}
