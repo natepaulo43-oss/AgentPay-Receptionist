@@ -20,7 +20,7 @@ export function businessProfile() {
         category: 'appointment',
         typicalPriceRange: '$280-$450',
         requiredQualifiers: ['vehicle', 'location', 'preferred time'],
-      },
+      }, 
       {
         name: 'Interior deep clean',
         category: 'appointment',
