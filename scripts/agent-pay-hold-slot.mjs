@@ -4,11 +4,11 @@ import { ExactEvmScheme, toClientEvmSigner } from '@x402/evm';
 import { privateKeyToAccount } from 'viem/accounts';
 
 const baseUrl = trimTrailingSlash(process.env.AGENTPAY_BASE_URL || 'http://127.0.0.1:8787');
-const privateKey = normalizePrivateKey(process.env.X402_BUYER_PRIVATE_KEY);
+const privateKey = await loadPrivateKey();
 
 if (!privateKey) {
   console.error('Missing X402_BUYER_PRIVATE_KEY. Use a funded Base Sepolia test wallet for live settlement.');
-  console.error('Example: X402_BUYER_PRIVATE_KEY=0x... AGENTPAY_BASE_URL=https://<cloudfront-domain> npm run agent:pay');
+  console.error('Example: AGENTPAY_BASE_URL=https://<cloudfront-domain> npm run agent:pay');
   process.exit(1);
 }
 
@@ -82,4 +82,54 @@ function normalizePrivateKey(value) {
   if (!value) return null;
   const trimmed = value.trim();
   return trimmed.startsWith('0x') ? trimmed : `0x${trimmed}`;
+}
+
+async function loadPrivateKey() {
+  const fromEnv = normalizePrivateKey(process.env.X402_BUYER_PRIVATE_KEY);
+  if (fromEnv) return fromEnv;
+  if (!process.stdin.isTTY) return null;
+
+  process.stdout.write('Enter X402_BUYER_PRIVATE_KEY for the funded Base Sepolia buyer wallet: ');
+  return new Promise((resolve) => {
+    const stdin = process.stdin;
+    const wasRaw = Boolean(stdin.isRaw);
+    let value = '';
+
+    stdin.resume();
+    stdin.setEncoding('utf8');
+    if (stdin.setRawMode) stdin.setRawMode(true);
+
+    const cleanup = () => {
+      stdin.off('data', onData);
+      if (stdin.setRawMode) stdin.setRawMode(wasRaw);
+      stdin.pause();
+    };
+
+    const finish = () => {
+      cleanup();
+      process.stdout.write('\n');
+      resolve(normalizePrivateKey(value));
+    };
+
+    const onData = (chunk) => {
+      for (const char of String(chunk)) {
+        if (char === '\u0003') {
+          cleanup();
+          process.stdout.write('\n');
+          process.exit(130);
+        }
+        if (char === '\r' || char === '\n') {
+          finish();
+          return;
+        }
+        if (char === '\u007f') {
+          value = value.slice(0, -1);
+          continue;
+        }
+        value += char;
+      }
+    };
+
+    stdin.on('data', onData);
+  });
 }
