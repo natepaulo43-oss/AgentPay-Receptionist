@@ -18,6 +18,8 @@ Target = "es2024"
 EntryPoints = ["handler.ts"]
 External = ["@aws-sdk/*"]
 
+
+
 [function_build_definitions.04a45590-f866-4458-9c11-8693ce951fe0]
 codeuri = "/Users/lairdmiller/Desktop/Hackathon/AgentPay-Receptionist/src/edge/origin-response"
 runtime = "nodejs24.x"
@@ -35,6 +37,8 @@ Minify = true
 Target = "es2024"
 EntryPoints = ["handler.ts"]
 External = ["@aws-sdk/*"]
+
+
 
 [function_build_definitions.18378a02-afce-4905-a729-054464c6552e]
 codeuri = "/Users/lairdmiller/Desktop/Hackathon/AgentPay-Receptionist/src/api"
@@ -54,6 +58,8 @@ Target = "es2024"
 EntryPoints = ["handler.ts"]
 External = ["@aws-sdk/*"]
 
+
+
 [function_build_definitions.886b4f34-2078-4c5e-b70a-96547d41b925]
 codeuri = "/Users/lairdmiller/Desktop/Hackathon/AgentPay-Receptionist/src/waf-sync"
 runtime = "nodejs24.x"
@@ -72,7 +78,9 @@ Target = "es2024"
 EntryPoints = ["handler.ts"]
 External = ["@aws-sdk/*"]
 
-[function_build_definitions.9df56a51-cb10-4e24-8939-cc3c635a84e8]
+
+
+[function_build_definitions.4ecd7e5c-1c8f-460e-aab8-2b15908bd004]
 codeuri = "/Users/lairdmiller/Desktop/Hackathon/AgentPay-Receptionist/src/deploy/static-content"
 runtime = "nodejs24.x"
 architecture = "x86_64"
@@ -81,7 +89,7 @@ manifest_hash = ""
 packagetype = "Zip"
 functions = ["StaticContentDeployFunction"]
 
-[function_build_definitions.9df56a51-cb10-4e24-8939-cc3c635a84e8.metadata]
+[function_build_definitions.4ecd7e5c-1c8f-460e-aab8-2b15908bd004.metadata]
 BuildMethod = "makefile"
 
 [layer_build_definitions]
