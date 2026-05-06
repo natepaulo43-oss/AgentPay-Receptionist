@@ -666,8 +666,8 @@ function landingPage() {
 
         <div>
           <p class="eyebrow">EasyA Consensus Miami 2026 · Agentic Track</p>
-          <h1>Turn any local business into a payable API endpoint.</h1>
-          <p class="hero-copy">AgentPay gives local businesses an AI front desk for humans and a machine-readable payment flow for autonomous agents. Questions are free. Real actions are paid, verified, and returned as structured API responses.</p>
+          <h1>Turn any SME into a payable API endpoint.</h1>
+          <p class="hero-copy">AgentPay gives SMEs an AI front desk for humans and a machine-readable payment flow for autonomous agents. Questions are free. Real actions are paid, verified, and returned as structured API responses.</p>
           <div class="hero-actions">
             <a class="primary" href="#/simulator">Open API Simulator</a>
             <a class="secondary" href="#/chat">Try Customer Chat</a>
@@ -839,10 +839,10 @@ function landingPage() {
 
       <div class="thesis-quote">
         <blockquote>
-          In the old internet, businesses needed <em>websites.</em><br>
-          In the agentic internet, businesses need <em>payable endpoints.</em>
+          In the old internet, SMEs needed <em>websites.</em><br>
+          In the agentic internet, SMEs need <em>payable endpoints.</em>
         </blockquote>
-        <p>AgentPay Receptionist gives every local business an AI front desk that humans and autonomous agents can pay over HTTP using x402.</p>
+        <p>AgentPay Receptionist gives every SME an AI front desk that humans and autonomous agents can pay over HTTP using x402.</p>
       </div>
     </section>
   `;
@@ -953,7 +953,7 @@ function chatPage() {
             </div>
             <div class="intake-fields">
               <div class="intake-row">
-                <span class="intake-label">Business</span>
+                <span class="intake-label">SME</span>
                 <span class="intake-value">Miami Elite Auto Detail</span>
               </div>
               <div class="intake-row">
@@ -1291,7 +1291,7 @@ function simulatorPage() {
 
       <div class="cta-section" style="margin-top:48px;">
         <h2>The agent is not filling out a form.</h2>
-        <p>Payment is part of the HTTP request cycle. After verification, a real-world business action is created — no checkout page, no human, no friction.</p>
+        <p>Payment is part of the HTTP request cycle. After verification, a real-world SME action is created — no checkout page, no human, no friction.</p>
         <div class="hero-actions" style="justify-content:center; margin-top:0;">
           <a class="primary" href="#/chat">Try the chat demo</a>
           <a class="secondary" href="#/miami">Miami Auto Detail use case</a>
@@ -1630,7 +1630,7 @@ function dashboardPage() {
       </div>
 
       <div class="cta-section">
-        <h2>Every local business becomes a payable API endpoint.</h2>
+        <h2>Every SME becomes a payable API endpoint.</h2>
         <p>See the full use case: how Miami Elite Auto Detail serves both human customers and autonomous agents from the same underlying endpoint.</p>
         <div class="hero-actions" style="justify-content:center; margin-top:0;">
           <a class="primary" href="#/miami">Miami Auto Detail use case</a>
