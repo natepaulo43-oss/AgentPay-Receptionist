@@ -7,7 +7,6 @@ import {
   PAY_TO_ADDRESS,
   PAYMENT_PROTOCOL,
 } from './config';
-
 export function businessProfile() {
   return {
     businessId: BUSINESS_ID,
