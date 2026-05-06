@@ -64,7 +64,7 @@ test('POST /api/paid/hold-slot returns HTTP 402 without x402 payment', async () 
   assert.equal(response.statusCode, 402);
   assert.equal(response.body.x402Version, 2);
   assert.equal(response.body.accepts[0].network, 'eip155:84532');
-  assert.equal(response.body.accepts[0].amount, '5000000');
+  assert.equal(response.body.accepts[0].amount, '500000');
   assert.ok(response.headers['Payment-Required']);
 });
 
@@ -84,7 +84,7 @@ test('edge-verified hold-slot creates booking JSON plus dashboard lead and payme
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
   assert.equal(response.body.action, 'hold_slot');
-  assert.equal(response.body.amountPaid, '5.00');
+  assert.equal(response.body.amountPaid, '0.50');
   assert.equal(response.body.paymentStatus, 'settled');
   assert.deepEqual(
     response.body.timeline.map((event) => event.status),

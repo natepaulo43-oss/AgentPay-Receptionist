@@ -51,7 +51,7 @@ export function businessProfile() {
       recommendedAction: 'hold_priority_slot',
       appointmentTime: '2026-05-05T16:30:00-04:00',
       expectedPayment: {
-        amount: '5.00',
+        amount: '0.50',
         currency: 'USDC',
         network: NETWORK,
         protocol: PAYMENT_PROTOCOL,
@@ -76,7 +76,7 @@ export function businessProfile() {
         action: 'hold_priority_slot',
         endpoint: '/api/paid/hold-slot',
         method: 'POST',
-        price: '$5.00',
+        price: '$0.50',
         currency: 'USDC',
         network: NETWORK,
         networkName: NETWORK_LABEL,

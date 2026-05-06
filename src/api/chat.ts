@@ -148,7 +148,7 @@ export function chatResponseFor(input: ChatInput): ChatResponse {
 
   if (leadFields.service && leadFields.vehicle) {
     return qualificationResponse(
-      `For the ${leadFields.vehicle}, I have a 4:30 PM priority ${leadFields.service.toLowerCase()} slot. Want me to hold it for a $5 USDC x402 deposit?`,
+      `For the ${leadFields.vehicle}, I have a 4:30 PM priority ${leadFields.service.toLowerCase()} slot. Want me to hold it for a $0.50 USDC x402 deposit?`,
       'offer_priority_slot',
       leadFields,
     );
@@ -197,7 +197,7 @@ function qualificationResponse(reply: string, intent: string, leadFields: LeadFi
 
 function paidHoldResponse(leadFields: LeadFields): ChatResponse {
   return {
-    reply: 'I can hold the 4:30 PM priority slot. A $5 USDC deposit over x402 is required before we reserve that appointment capacity.',
+    reply: 'I can hold the 4:30 PM priority slot. A $0.50 USDC deposit over x402 is required before we reserve that appointment capacity.',
     intent: 'hold_priority_slot',
     requiresPayment: true,
     confidence: 0.96,
@@ -205,7 +205,7 @@ function paidHoldResponse(leadFields: LeadFields): ChatResponse {
     paidAction: {
       type: 'hold_slot',
       endpoint: '/api/paid/hold-slot',
-      price: '$5.00',
+      price: '$0.50',
       currency: 'USDC',
       network: NETWORK,
       protocol: PAYMENT_PROTOCOL,

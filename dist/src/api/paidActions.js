@@ -12,7 +12,7 @@ async function handleHoldSlot(event, origin) {
     const requestEvent = (0, storage_1.eventFor)((0, config_1.makeId)('act'), 'REQUEST_RECEIVED', 'POST /api/paid/hold-slot reached the business-action endpoint.');
     if (!hasVerifiedPayment(headers)) {
         storage_1.memory.events.unshift(requestEvent);
-        const requiredEvent = (0, storage_1.eventFor)(requestEvent.actionId, 'PAYMENT_REQUIRED_402', '$5 USDC x402 payment required before slot capacity is reserved.', config_1.HOLD_SLOT_PRICE);
+        const requiredEvent = (0, storage_1.eventFor)(requestEvent.actionId, 'PAYMENT_REQUIRED_402', '$0.50 USDC x402 payment required before slot capacity is reserved.', config_1.HOLD_SLOT_PRICE);
         storage_1.memory.events.unshift(requiredEvent);
         await Promise.all([
             (0, storage_1.safePersist)('PAYMENT_EVENT', requestEvent.eventId, requestEvent),
@@ -117,7 +117,7 @@ function paymentRequiredResponse(event, origin) {
                 },
             },
         ],
-        error: `HTTP 402 Payment Required. $5 USDC required. Network: ${config_1.NETWORK_LABEL}. Protocol: x402.`,
+        error: `HTTP 402 Payment Required. $0.50 USDC required. Network: ${config_1.NETWORK_LABEL}. Protocol: x402.`,
     };
     return (0, http_2.json)(402, body, origin, {
         'Payment-Required': (0, http_1.encodePaymentRequiredHeader)(body),

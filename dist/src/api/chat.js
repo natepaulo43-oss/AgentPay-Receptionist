@@ -90,7 +90,7 @@ function chatResponseFor(input) {
         return qualificationResponse(`We can likely fit ${withIndefiniteArticle(leadFields.service)} today. What vehicle are we detailing?`, 'qualify_vehicle', leadFields);
     }
     if (leadFields.service && leadFields.vehicle) {
-        return qualificationResponse(`For the ${leadFields.vehicle}, I have a 4:30 PM priority ${leadFields.service.toLowerCase()} slot. Want me to hold it for a $5 USDC x402 deposit?`, 'offer_priority_slot', leadFields);
+        return qualificationResponse(`For the ${leadFields.vehicle}, I have a 4:30 PM priority ${leadFields.service.toLowerCase()} slot. Want me to hold it for a $0.50 USDC x402 deposit?`, 'offer_priority_slot', leadFields);
     }
     return freeResponse('I can answer service questions free, then create a paid action only when you want to hold a slot, submit a verified quote request, or request priority callback.', 'general_question', leadFields, 'Explain the free-versus-paid boundary and ask one qualifying question next.');
 }
@@ -122,7 +122,7 @@ function qualificationResponse(reply, intent, leadFields) {
 }
 function paidHoldResponse(leadFields) {
     return {
-        reply: 'I can hold the 4:30 PM priority slot. A $5 USDC deposit over x402 is required before we reserve that appointment capacity.',
+        reply: 'I can hold the 4:30 PM priority slot. A $0.50 USDC deposit over x402 is required before we reserve that appointment capacity.',
         intent: 'hold_priority_slot',
         requiresPayment: true,
         confidence: 0.96,
@@ -130,7 +130,7 @@ function paidHoldResponse(leadFields) {
         paidAction: {
             type: 'hold_slot',
             endpoint: '/api/paid/hold-slot',
-            price: '$5.00',
+            price: '$0.50',
             currency: 'USDC',
             network: config_1.NETWORK,
             protocol: config_1.PAYMENT_PROTOCOL,

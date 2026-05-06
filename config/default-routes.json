@@ -4,7 +4,7 @@
     {
       "pattern": "/api/paid/hold-slot",
       "policies": [
-        { "condition": "default", "action": "5.00" }
+        { "condition": "default", "action": "0.50" }
       ]
     },
     {
@@ -22,7 +22,7 @@
     {
       "pattern": "/api/paid/**",
       "policies": [
-        { "condition": "default", "action": "5.00" }
+        { "condition": "default", "action": "0.50" }
       ]
     },
     {

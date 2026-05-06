@@ -66,7 +66,7 @@ Demo story:
 
 1. A customer or autonomous agent asks for a same-day ceramic detail appointment.
 2. The AI receptionist asks a qualifying question and offers a **4:30 PM priority appointment hold**.
-3. Holding the slot requires a **$5 USDC deposit**.
+3. Holding the slot requires a **$0.50 USDC deposit**.
 4. The app attempts `POST /api/paid/hold-slot` without payment.
 5. AWS CloudFront/WAF/Lambda@Edge returns **HTTP 402 Payment Required**.
 6. The client retries with x402 payment information.
@@ -170,7 +170,7 @@ Paid routes:
 
 | Method | Route | Price | Status |
 |---|---|---:|---|
-| `POST` | `/api/paid/hold-slot` | `$5.00` USDC | Fully implemented |
+| `POST` | `/api/paid/hold-slot` | `$0.50` USDC | Fully implemented |
 | `POST` | `/api/paid/quote-request` | `$1.00` USDC | Configured roadmap stub |
 | `POST` | `/api/paid/priority-callback` | `$2.00` USDC | Configured roadmap stub |
 
@@ -184,7 +184,7 @@ Successful hold-slot response:
   "businessName": "Miami Elite Auto Detail",
   "service": "Same-day ceramic detail",
   "appointmentTime": "2026-05-05T16:30:00-04:00",
-  "amountPaid": "5.00",
+  "amountPaid": "0.50",
   "currency": "USDC",
   "network": "eip155:84532",
   "paymentStatus": "settled"
@@ -240,10 +240,16 @@ Deploy:
 
 ```bash
 npm install
-npm run build
-sam build
-sam deploy --guided --region us-east-1 --capabilities CAPABILITY_NAMED_IAM
+npm test
+npm run sam:build
+
+PAY_TO_ADDRESS=0xaA49663fe49b18736240bfF80898e72Fd33d8ab6 \
+npm run sam:deploy:live
 ```
+
+`npm run sam:deploy:live` intentionally deploys the SAM stack first, then writes
+`config/default-routes.json` directly to SSM and invokes the WAF sync Lambda.
+This avoids SAM CLI shorthand parsing issues with raw JSON parameter values.
 
 Key SAM parameters:
 
@@ -271,18 +277,25 @@ The default config makes discovery/chat/dashboard routes free and paid actions c
 ```json
 {
   "pattern": "/api/paid/hold-slot",
-  "policies": [{ "condition": "default", "action": "5.00" }]
+  "policies": [{ "condition": "default", "action": "0.50" }]
 }
 ```
 
 Update pricing without redeploying:
 
 ```bash
+ROUTE_CONFIG_JSON=$(node -e 'process.stdout.write(JSON.stringify(require("./config/default-routes.json")))')
+
 aws ssm put-parameter \
-  --name "/x402-edge/<stack-name>/config/routes" \
-  --value '<paste JSON here>' \
+  --name "/x402-edge/agentpay-receptionist/config/routes" \
+  --value "$ROUTE_CONFIG_JSON" \
   --type String \
   --overwrite
+
+aws lambda invoke \
+  --function-name agentpay-receptionist-waf-sync \
+  --region us-east-1 \
+  /tmp/agentpay-waf-sync-response.json
 ```
 
 ## AI Receptionist Behavior

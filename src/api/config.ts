@@ -11,8 +11,8 @@ export const ALLOW_UNVERIFIED_PAYMENT_HEADERS =
 export const MAX_BODY_BYTES = 50 * 1024;
 export const CHAT_RATE_LIMIT = 30;
 export const CHAT_RATE_WINDOW_MS = 60 * 1000;
-export const HOLD_SLOT_PRICE = '5.00';
-export const HOLD_SLOT_AMOUNT_ATOMIC = '5000000';
+export const HOLD_SLOT_PRICE = '0.50';
+export const HOLD_SLOT_AMOUNT_ATOMIC = '500000';
 export const HOLD_SLOT_DESCRIPTION =
   'Hold a priority appointment slot with a local business receptionist.';
 export const APPOINTMENT_TIME = '2026-05-05T16:30:00-04:00';

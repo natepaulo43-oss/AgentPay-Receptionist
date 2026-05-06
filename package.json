@@ -10,6 +10,10 @@
     "build": "tsc",
     "dev:demo": "node demo/local-server.mjs",
     "agent:pay": "node scripts/agent-pay-hold-slot.mjs",
+    "sam:validate": "sam validate --region us-east-1",
+    "sam:build": "sam build",
+    "sam:deploy": "sam deploy --guided --region us-east-1 --capabilities CAPABILITY_NAMED_IAM",
+    "sam:deploy:live": "node scripts/deploy-live.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",
     "lint": "tsc --noEmit"
   },

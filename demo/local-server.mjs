@@ -16,8 +16,8 @@ const NETWORK = 'eip155:84532';
 const NETWORK_LABEL = 'Base Sepolia';
 const PAY_TO_ADDRESS = process.env.PAY_TO_ADDRESS || '0x0000000000000000000000000000000000000402';
 const APPOINTMENT_TIME = '2026-05-05T16:30:00-04:00';
-const HOLD_SLOT_PRICE = '5.00';
-const HOLD_SLOT_AMOUNT_ATOMIC = '5000000';
+const HOLD_SLOT_PRICE = '0.50';
+const HOLD_SLOT_AMOUNT_ATOMIC = '500000';
 const USDC_ASSET_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
 const USDC_ASSET_NAME = 'USDC';
 const USDC_ASSET_VERSION = '2';
@@ -115,7 +115,7 @@ function profile() {
       customerGoal: 'Hold a same-day ceramic detail appointment for a black Tesla Model Y in Miami.',
       recommendedAction: 'hold_priority_slot',
       appointmentTime: APPOINTMENT_TIME,
-      expectedPayment: { amount: '5.00', currency: 'USDC', network: NETWORK, protocol: 'x402' },
+      expectedPayment: { amount: '0.50', currency: 'USDC', network: NETWORK, protocol: 'x402' },
     },
     freeCapabilities: [
       { action: 'answer_questions', endpoint: '/api/chat', method: 'POST' },
@@ -126,7 +126,7 @@ function profile() {
         action: 'hold_priority_slot',
         endpoint: '/api/paid/hold-slot',
         method: 'POST',
-        price: '$5.00',
+        price: '$0.50',
         currency: 'USDC',
         network: NETWORK,
         networkName: NETWORK_LABEL,
@@ -194,7 +194,7 @@ function chat(message, conversationHistory = []) {
     return qualificationResponse(`We can likely fit ${withIndefiniteArticle(leadFields.service)} today. What vehicle are we detailing?`, 'qualify_vehicle', leadFields);
   }
   if (leadFields.service && leadFields.vehicle) {
-    return qualificationResponse(`For the ${leadFields.vehicle}, I have a 4:30 PM priority ${leadFields.service.toLowerCase()} slot. Want me to hold it for a $5 USDC x402 deposit?`, 'offer_priority_slot', leadFields);
+    return qualificationResponse(`For the ${leadFields.vehicle}, I have a 4:30 PM priority ${leadFields.service.toLowerCase()} slot. Want me to hold it for a $0.50 USDC x402 deposit?`, 'offer_priority_slot', leadFields);
   }
   return freeResponse('I can answer service questions free, then create a paid action only when you want to hold a slot, submit a verified quote request, or request priority callback.', 'general_question', leadFields);
 }
@@ -229,7 +229,7 @@ function qualificationResponse(reply, intent, leadFields) {
 
 function paidHoldResponse(leadFields) {
   return {
-    reply: 'I can hold the 4:30 PM priority slot. A $5 USDC deposit over x402 is required before we reserve that appointment capacity.',
+    reply: 'I can hold the 4:30 PM priority slot. A $0.50 USDC deposit over x402 is required before we reserve that appointment capacity.',
     intent: 'hold_priority_slot',
     requiresPayment: true,
     confidence: 0.96,
@@ -237,7 +237,7 @@ function paidHoldResponse(leadFields) {
     paidAction: {
       type: 'hold_slot',
       endpoint: '/api/paid/hold-slot',
-      price: '$5.00',
+      price: '$0.50',
       currency: 'USDC',
       network: NETWORK,
       protocol: 'x402',
@@ -330,7 +330,7 @@ function paymentRequired(req, res) {
         action: 'hold_priority_slot',
       },
     }],
-    error: 'HTTP 402 Payment Required. $5 USDC required. Network: Base Sepolia. Protocol: x402.',
+    error: 'HTTP 402 Payment Required. $0.50 USDC required. Network: Base Sepolia. Protocol: x402.',
   };
   json(res, 402, body, {
     'Payment-Required': encodePaymentRequiredHeader(body),
@@ -347,7 +347,7 @@ async function holdSlot(req, res) {
   const received = eventFor(actionId, 'REQUEST_RECEIVED', 'POST /api/paid/hold-slot reached the business-action endpoint.');
 
   if (!hasPayment(headers)) {
-    const required = eventFor(actionId, 'PAYMENT_REQUIRED_402', '$5 USDC x402 payment required before slot capacity is reserved.', HOLD_SLOT_PRICE);
+    const required = eventFor(actionId, 'PAYMENT_REQUIRED_402', '$0.50 USDC x402 payment required before slot capacity is reserved.', HOLD_SLOT_PRICE);
     memory.events.unshift(required, received);
     paymentRequired(req, res);
     return;

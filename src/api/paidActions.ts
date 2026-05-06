@@ -36,7 +36,7 @@ export async function handleHoldSlot(
     const requiredEvent = eventFor(
       requestEvent.actionId,
       'PAYMENT_REQUIRED_402',
-      '$5 USDC x402 payment required before slot capacity is reserved.',
+      '$0.50 USDC x402 payment required before slot capacity is reserved.',
       HOLD_SLOT_PRICE,
     );
     memory.events.unshift(requiredEvent);
@@ -157,7 +157,7 @@ function paymentRequiredResponse(event: APIGatewayProxyEvent, origin?: string): 
         },
       },
     ],
-    error: `HTTP 402 Payment Required. $5 USDC required. Network: ${NETWORK_LABEL}. Protocol: x402.`,
+    error: `HTTP 402 Payment Required. $0.50 USDC required. Network: ${NETWORK_LABEL}. Protocol: x402.`,
   };
   return json(
     402,
