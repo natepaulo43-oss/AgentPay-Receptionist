@@ -2973,6 +2973,113 @@ th {
   color: var(--green-bright);
 }
 
+/* Live proof board */
+.proof-board {
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.08), rgba(255, 255, 255, 0.025));
+  overflow: hidden;
+}
+
+.proof-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.18);
+  flex-wrap: wrap;
+}
+
+.proof-header .eyebrow {
+  margin-bottom: 6px;
+}
+
+.proof-header h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+.proof-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.proof-card {
+  min-height: 132px;
+  padding: 16px;
+  background: rgba(2, 8, 16, 0.82);
+}
+
+.proof-card.ok {
+  background: linear-gradient(180deg, rgba(18, 161, 80, 0.08), rgba(2, 8, 16, 0.86));
+}
+
+.proof-card.warn {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.10), rgba(2, 8, 16, 0.86));
+}
+
+.proof-label {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--on-dark-subtle);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+
+.proof-card strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #ffffff;
+  font-size: 1.1rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.proof-card p {
+  margin: 0;
+  color: var(--on-dark-muted);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.proof-receipt {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 16px 18px;
+  border-top: 1px solid rgba(37, 99, 235, 0.18);
+}
+
+.proof-receipt p {
+  margin: 0;
+  color: var(--on-dark-subtle);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.proof-receipt pre {
+  margin: 0;
+  padding: 12px;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
+  background: #020810;
+  color: #7dd3fc;
+  font-family: var(--font-mono);
+  font-size: 0.69rem;
+  line-height: 1.55;
+}
+
 /* === RESPONSIVE ============================================ */
 @media (max-width: 1100px) {
   .chat-split {
@@ -3025,6 +3132,11 @@ th {
 
   .sim-console-body {
     max-height: 360px;
+  }
+
+  .proof-grid,
+  .proof-receipt {
+    grid-template-columns: 1fr;
   }
 }
 
