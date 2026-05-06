@@ -791,7 +791,7 @@ function landingPage() {
 
         <div>
           <p class="eyebrow">EasyA Consensus Miami 2026 · Agentic Track</p>
-          <h1>The AI receptionist that agents can pay.</h1>
+          <h1>Turn any SME into a payable API endpoint.</h1>
           <p class="hero-copy">In the old internet, businesses needed websites. In the agentic internet, businesses need payable endpoints. AgentPay turns Miami Elite Auto Detail into a machine-readable service endpoint where questions are free and real appointment holds require x402 payment.</p>
           <div class="hero-actions">
             <a class="primary" href="#/simulator">Open API Simulator</a>
