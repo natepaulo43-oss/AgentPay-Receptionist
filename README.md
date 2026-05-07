@@ -1,5 +1,9 @@
 # AgentPay Receptionist
 
+## Link to deployed demo 
+
+https://d2pc20oig2383p.cloudfront.net/#/
+
 > AgentPay gives local businesses a payment-gated AI receptionist to help autonomous AI agents discover and book services with x402 HTTP payments.
 
 AgentPay Receptionist turns any local service business into a payable HTTP endpoint — discoverable by humans and callable by autonomous AI agents, settled in USDC via the x402 protocol.
