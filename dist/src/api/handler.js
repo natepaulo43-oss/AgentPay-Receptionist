@@ -4,6 +4,7 @@ exports.handler = void 0;
 const businessProfile_1 = require("./businessProfile");
 const chat_1 = require("./chat");
 const config_1 = require("./config");
+const demoBuyer_1 = require("./demoBuyer");
 const http_1 = require("./http");
 const paidActions_1 = require("./paidActions");
 const storage_1 = require("./storage");
@@ -40,6 +41,9 @@ async function route(event, origin) {
             message,
             conversationHistory: (0, chat_1.parseConversationHistory)(body.conversationHistory),
         }), origin);
+    }
+    if (path === '/api/demo/agent-buyer' && method === 'POST') {
+        return (0, demoBuyer_1.handleDemoAgentBuyer)(event, origin);
     }
     if (path === '/api/paid/hold-slot' && method === 'POST') {
         return (0, paidActions_1.handleHoldSlot)(event, origin);

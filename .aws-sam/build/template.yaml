@@ -46,6 +46,16 @@ Parameters:
     Default: '{"version":"2","routes":[{"pattern":"/api/paid/hold-slot","policies":[{"condition":"default","action":"0.50"}]},{"pattern":"/api/paid/quote-request","policies":[{"condition":"default","action":"1.00"}]},{"pattern":"/api/paid/priority-callback","policies":[{"condition":"default","action":"2.00"}]},{"pattern":"/api/paid/**","policies":[{"condition":"default","action":"0.50"}]},{"pattern":"/api/agent/business-profile","policies":[{"condition":"default","action":"0"}]},{"pattern":"/api/chat","policies":[{"condition":"default","action":"0"}]},{"pattern":"/api/dashboard/**","policies":[{"condition":"default","action":"0"}]},{"pattern":"/api/health","policies":[{"condition":"default","action":"0"}]},{"pattern":"/api/**","policies":[{"condition":"default","action":"0"}]},{"pattern":"/**","policies":[{"condition":"default","action":"0"}]}]}
 
       '
+  DemoBuyerPrivateKey:
+    Type: String
+    NoEcho: true
+    Description: Optional throwaway Base Sepolia buyer private key for the one-click
+      demo-agent buyer endpoint
+    Default: ''
+  DemoPublicBaseUrl:
+    Type: String
+    Description: Optional deployed CloudFront URL used by the server-side demo buyer
+    Default: ''
 Conditions:
   UseCdpFacilitator:
     Fn::Equals:
@@ -242,14 +252,18 @@ Resources:
       Description: Free receptionist endpoints and paid action origin handlers
       Handler: handler.handler
       CodeUri: BusinessApiFunction
-      Timeout: 10
-      MemorySize: 256
+      Timeout: 25
+      MemorySize: 512
       Environment:
         Variables:
           AGENTPAY_TABLE_NAME:
             Ref: AgentPayTable
           PAY_TO_ADDRESS:
             Ref: PayToAddress
+          DEMO_BUYER_PRIVATE_KEY:
+            Ref: DemoBuyerPrivateKey
+          AGENTPAY_PUBLIC_BASE_URL:
+            Ref: DemoPublicBaseUrl
           X402_NETWORK:
             Ref: Network
           X402_FACILITATOR_URL:

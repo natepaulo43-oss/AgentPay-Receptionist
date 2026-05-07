@@ -34,6 +34,17 @@ const memory = {
   events: [],
 };
 
+const DEMO_BUYER_PAYLOAD = {
+  sessionId: 'agent-web-x402-buyer',
+  customerName: 'Autonomous Agent',
+  customerPhone: '(305) 555-0142',
+  vehicle: 'black Tesla Model Y',
+  service: 'Same-day ceramic detail',
+  request: 'Hold a same-day ceramic detail appointment at 4:30 PM.',
+  appointmentTime: APPOINTMENT_TIME,
+  transcriptSnippet: 'Local demo buyer received HTTP 402, attached a mock x402 payment, and booked the hold.',
+};
+
 function id(prefix) {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -306,9 +317,10 @@ function withIndefiniteArticle(value) {
   return `${article} ${lower}`;
 }
 
-function paymentRequired(req, res) {
-  const resource = `http://${req.headers.host}${new URL(req.url, `http://${req.headers.host}`).pathname}`;
-  const body = {
+function paymentRequirementBody(req, resourcePath) {
+  const pathname = resourcePath || new URL(req.url, `http://${req.headers.host}`).pathname;
+  const resource = `http://${req.headers.host}${pathname}`;
+  return {
     x402Version: 2,
     resource: {
       url: resource,
@@ -332,11 +344,103 @@ function paymentRequired(req, res) {
     }],
     error: 'HTTP 402 Payment Required. $0.50 USDC required. Network: Base Sepolia. Protocol: x402.',
   };
+}
+
+function paymentRequired(req, res) {
+  const body = paymentRequirementBody(req);
   json(res, 402, body, {
     'Payment-Required': encodePaymentRequiredHeader(body),
     'x-agentpay-payment-protocol': 'x402',
     'x-agentpay-network': NETWORK,
     'x-agentpay-price': HOLD_SLOT_PRICE,
+  });
+}
+
+async function localDemoAgentBuyer(req, res) {
+  await bodyJson(req);
+  const actionId = id('act');
+  const received = eventFor(actionId, 'REQUEST_RECEIVED', 'POST /api/paid/hold-slot reached the local demo endpoint.');
+  const createdAt = now();
+  const payment = {
+    actionId,
+    businessId: BUSINESS_ID,
+    sessionId: DEMO_BUYER_PAYLOAD.sessionId,
+    type: 'hold_slot',
+    amount: HOLD_SLOT_PRICE,
+    currency: 'USDC',
+    network: NETWORK,
+    paymentStatus: 'settled',
+    createdAt,
+    updatedAt: createdAt,
+  };
+  const lead = {
+    leadId: id('lead'),
+    businessId: BUSINESS_ID,
+    customerName: DEMO_BUYER_PAYLOAD.customerName,
+    customerPhone: DEMO_BUYER_PAYLOAD.customerPhone,
+    request: DEMO_BUYER_PAYLOAD.request,
+    service: DEMO_BUYER_PAYLOAD.service,
+    vehicle: DEMO_BUYER_PAYLOAD.vehicle,
+    appointmentTime: DEMO_BUYER_PAYLOAD.appointmentTime,
+    paidActionId: actionId,
+    status: 'paid_slot_held',
+    transcriptSnippet: DEMO_BUYER_PAYLOAD.transcriptSnippet,
+    createdAt,
+  };
+  const timeline = [
+    received,
+    eventFor(actionId, 'PAYMENT_REQUIRED_402', 'Local dev server produced the same HTTP 402 x402 requirement shape.', HOLD_SLOT_PRICE),
+    eventFor(actionId, 'PAYMENT_SIGNATURE_RECEIVED', 'Local demo buyer attached a mock payment header.', HOLD_SLOT_PRICE),
+    eventFor(actionId, 'PAYMENT_VERIFIED', 'Local dev mode marks the mock x402 payment as verified.', HOLD_SLOT_PRICE),
+    eventFor(actionId, 'ACTION_COMPLETED', 'Priority appointment hold was created by the local API.', HOLD_SLOT_PRICE),
+    eventFor(actionId, 'LEAD_CREATED', 'Paid lead appeared in the local business dashboard.', HOLD_SLOT_PRICE),
+  ];
+  memory.payments.unshift(payment);
+  memory.leads.unshift(lead);
+  memory.events.unshift(...timeline.slice().reverse());
+
+  const booking = {
+    success: true,
+    action: 'hold_slot',
+    bookingId: lead.leadId,
+    businessName: BUSINESS_NAME,
+    service: lead.service,
+    appointmentTime: lead.appointmentTime,
+    amountPaid: payment.amount,
+    currency: payment.currency,
+    network: payment.network,
+    paymentStatus: payment.paymentStatus,
+    paidActionId: actionId,
+    lead,
+    timeline,
+  };
+
+  return json(res, 200, {
+    success: true,
+    configured: true,
+    mode: 'local_mock_demo_buyer',
+    baseUrl: `http://${host}:${port}`,
+    summary: 'Local mock buyer discovered the business, hit HTTP 402, attached a demo payment, and created a booking lead.',
+    profile: profile(),
+    steps: [
+      'DISCOVERED_BUSINESS_PROFILE',
+      'PAYMENT_REQUIRED_402',
+      'PAYMENT_SIGNATURE_RECEIVED',
+      'PAYMENT_VERIFIED',
+      'ACTION_COMPLETED',
+      'LEAD_CREATED',
+    ],
+    unpaidStatus: 402,
+    unpaidPaymentRequirement: paymentRequirementBody(req, '/api/paid/hold-slot'),
+    paidStatus: 200,
+    paymentResponse: { localDemo: true },
+    booking,
+    bookingId: booking.bookingId,
+    paidActionId: booking.paidActionId,
+    amountPaid: booking.amountPaid,
+    currency: booking.currency,
+    network: booking.network,
+    paymentStatus: booking.paymentStatus,
   });
 }
 
@@ -417,6 +521,7 @@ async function apiRoute(req, res, url) {
     const body = await bodyJson(req);
     return json(res, 200, chat(String(body.message || body.textFromUser || ''), Array.isArray(body.conversationHistory) ? body.conversationHistory : []));
   }
+  if (url.pathname === '/api/demo/agent-buyer' && req.method === 'POST') return localDemoAgentBuyer(req, res);
   if (url.pathname === '/api/paid/hold-slot' && req.method === 'POST') return holdSlot(req, res);
   if ((url.pathname === '/api/paid/quote-request' || url.pathname === '/api/paid/priority-callback') && req.method === 'POST') {
     const headers = lowerHeaders(req);

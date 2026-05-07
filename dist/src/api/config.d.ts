@@ -4,6 +4,8 @@ export declare const NETWORK: string;
 export declare const NETWORK_LABEL: string;
 export declare const PAYMENT_PROTOCOL = "x402";
 export declare const PAY_TO_ADDRESS: string;
+export declare const DEMO_BUYER_PRIVATE_KEY: string;
+export declare const AGENTPAY_PUBLIC_BASE_URL: string;
 export declare const TABLE_NAME: string | undefined;
 export declare const ALLOW_UNVERIFIED_PAYMENT_HEADERS: boolean;
 export declare const MAX_BODY_BYTES: number;

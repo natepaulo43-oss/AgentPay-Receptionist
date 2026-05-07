@@ -18,7 +18,7 @@ const demoPayload = {
   transcriptSnippet: 'Autonomous agent requested a same-day ceramic detail and accepted the $0.50 x402 priority hold.',
 };
 
-const AGENT_BUYER_COMMAND = 'X402_BUYER_PRIVATE_KEY=0x... AGENTPAY_BASE_URL=http://127.0.0.1:8787 npm run agent:pay';
+const AGENT_BUYER_COMMAND = `AGENTPAY_BASE_URL=${window.location.origin} npm run agent:pay`;
 
 const state = {
   route: '/',
@@ -31,6 +31,7 @@ const state = {
   pendingPaidAction: null,
   lastChatDecision: null,
   timeline: [],
+  lastPaymentRequirement: null,
   requestJson: null,
   responseJson: null,
   lastHttpStatus: null,
@@ -180,6 +181,127 @@ function showBuyerNotice() {
     : '';
 }
 
+function latestLead() {
+  return state.leads[0] || state.responseJson?.lead || null;
+}
+
+function latestPayment() {
+  return state.payments[0] || (
+    state.responseJson?.paidActionId
+      ? {
+          actionId: state.responseJson.paidActionId,
+          amount: state.responseJson.amountPaid,
+          currency: state.responseJson.currency,
+          network: state.responseJson.network,
+          paymentStatus: state.responseJson.paymentStatus,
+        }
+      : null
+  );
+}
+
+function latestPaymentRequirement() {
+  return state.lastPaymentRequirement || (state.lastHttpStatus === 402 ? state.responseJson : null);
+}
+
+function shortId(value) {
+  if (!value) return 'pending';
+  const text = String(value);
+  return text.length > 22 ? `${text.slice(0, 10)}…${text.slice(-6)}` : text;
+}
+
+function compactTime(value) {
+  if (!value) return 'pending';
+  try {
+    return new Date(value).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  } catch {
+    return value;
+  }
+}
+
+function proofCard(label, value, detail, variant = 'pending') {
+  return `
+    <div class="proof-card ${variant}">
+      <span class="proof-label">${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <p>${escapeHtml(detail)}</p>
+    </div>
+  `;
+}
+
+function proofEvidenceMarkup() {
+  const requirement = latestPaymentRequirement();
+  const accepted = requirement?.accepts?.[0];
+  const payment = latestPayment();
+  const lead = latestLead();
+  const bookingId = lead?.leadId || state.responseJson?.bookingId;
+  const proofJson = {
+    discoveredBusiness: state.profile?.name || null,
+    last402AmountAtomic: accepted?.amount || null,
+    paidActionId: payment?.actionId || state.responseJson?.paidActionId || null,
+    latestBookingId: bookingId || null,
+    latestLeadCreatedAt: lead?.createdAt || null,
+    dashboardLeadCount: state.leads.length,
+    dashboardPaymentCount: state.payments.length,
+  };
+
+  return `
+    <div class="proof-board">
+      <div class="proof-header">
+        <div>
+          <p class="eyebrow">Live proof</p>
+          <h3>Evidence that the demo is not hardcoded</h3>
+        </div>
+        <span class="status-pill ${lead || payment ? 'live' : 'inactive'}">${lead || payment ? 'State changed' : 'Awaiting live action'}</span>
+      </div>
+      <div class="proof-grid">
+        ${proofCard(
+          'Free discovery',
+          state.profile ? 'HTTP 200' : 'Not run yet',
+          state.profile
+            ? `${state.profile.name} returned ${state.profile.paidCapabilities?.length || 0} paid capabilities.`
+            : 'Run discovery or open the buyer CLI to fetch the machine readable profile.',
+          state.profile ? 'ok' : 'pending',
+        )}
+        ${proofCard(
+          'AWS edge gate',
+          accepted ? 'HTTP 402' : 'No 402 yet',
+          accepted
+            ? `CloudFront returned x402 amount ${accepted.amount} atomic USDC for ${accepted.network}.`
+            : 'Attempt the paid hold without payment to capture the live 402 requirement.',
+          accepted ? 'warn' : 'pending',
+        )}
+        ${proofCard(
+          'x402 payment',
+          payment ? `${payment.amount || '0.50'} ${payment.currency || 'USDC'}` : 'No payment yet',
+          payment
+            ? `${payment.paymentStatus || 'verified'} on ${payment.network || 'eip155:84532'} · action ${shortId(payment.actionId)}.`
+            : 'Run the buyer flow to attach a signed x402 payment and retry the request.',
+          payment ? 'ok' : 'pending',
+        )}
+        ${proofCard(
+          'Dashboard lead',
+          lead ? shortId(lead.leadId) : 'No live lead yet',
+          lead
+            ? `${lead.customerName || 'Agent'} · ${lead.status || 'created'} · ${compactTime(lead.createdAt)}.`
+            : 'After verification, the origin API creates a lead that appears here and in DynamoDB.',
+          lead ? 'ok' : 'pending',
+        )}
+      </div>
+      <div class="proof-receipt">
+        <div>
+          <span class="proof-label">Run-specific receipt</span>
+          <p>These values update when the live buyer creates a new booking.</p>
+        </div>
+        <pre>${escapeHtml(pretty(proofJson))}</pre>
+      </div>
+    </div>
+  `;
+}
+
 function setTimelineFromResponse(result) {
   if (Array.isArray(result?.timeline)) {
     state.timeline = result.timeline.map((event) => event.status).filter(Boolean);
@@ -211,6 +333,7 @@ async function discoverProfile() {
 async function attemptHoldSlot(withPayment) {
   setBusy(true);
   state.buyerNotice = null;
+  state.lastPaymentRequirement = null;
   const requestBase = {
     actor: 'autonomous_agent',
     method: 'POST',
@@ -230,6 +353,7 @@ async function attemptHoldSlot(withPayment) {
     state.lastHttpStatus = unpaidResult.status;
     state.responseJson = unpaidResult.body;
     if (unpaidResult.status === 402) {
+      state.lastPaymentRequirement = unpaidResult.body;
       state.timeline = ['REQUEST_RECEIVED', 'PAYMENT_REQUIRED_402'];
     }
 
@@ -264,6 +388,57 @@ async function attemptHoldSlot(withPayment) {
       error: message,
       agentBuyerCommand: AGENT_BUYER_COMMAND,
     };
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function runServerDemoBuyer() {
+  setBusy(true);
+  state.buyerNotice = null;
+  state.lastPaymentRequirement = null;
+  state.timeline = ['REQUEST_RECEIVED'];
+  state.requestJson = {
+    actor: 'server_side_autonomous_agent',
+    method: 'POST',
+    path: '/api/demo/agent-buyer',
+    headers: { 'content-type': 'application/json' },
+    body: {
+      baseUrl: window.location.origin,
+      action: 'hold_priority_slot',
+      note: 'Server uses the configured throwaway Base Sepolia buyer key; no key is sent from the browser.',
+    },
+  };
+
+  try {
+    const result = await api('/api/demo/agent-buyer', {
+      method: 'POST',
+      body: JSON.stringify({ baseUrl: window.location.origin, action: 'hold_priority_slot' }),
+    });
+    state.lastHttpStatus = result.status;
+    state.responseJson = result.body;
+    state.profile = result.body?.profile || state.profile;
+    state.lastPaymentRequirement = result.body?.unpaidPaymentRequirement || null;
+
+    if (result.ok && result.body?.success) {
+      setTimelineFromResponse(result.body.booking || result.body);
+      state.buyerNotice = 'One-click agent buyer completed: 402 captured, x402 payment verified, booking lead created.';
+      await loadDashboard(false);
+      return;
+    }
+
+    if (result.body?.configured === false) {
+      state.buyerNotice = 'The one-click buyer endpoint is deployed, but DEMO_BUYER_PRIVATE_KEY is not configured yet.';
+    } else {
+      state.timeline = result.body?.unpaidStatus === 402
+        ? ['REQUEST_RECEIVED', 'PAYMENT_REQUIRED_402']
+        : ['REQUEST_RECEIVED'];
+      state.buyerNotice = result.body?.error || 'The server-side demo buyer returned an error.';
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    state.buyerNotice = message;
+    state.responseJson = { error: message };
   } finally {
     setBusy(false);
   }
@@ -439,6 +614,7 @@ async function resetDashboard() {
     state.payments = [];
     state.events = [];
     state.timeline = [];
+    state.lastPaymentRequirement = null;
     state.lastHttpStatus = result.status;
     state.requestJson = {
       actor: 'business_operator',
@@ -471,7 +647,7 @@ async function runSimulation() {
     state.simStep = i + 1;
     render();
     const consoleEl = document.querySelector('#simConsole');
-    if (consoleEl) consoleEl.scrollTop = consoleEl.scrollHeight;
+    if (consoleEl) consoleEl.scrollTo({ top: consoleEl.scrollHeight, behavior: 'smooth' });
   }
   state.simRunning = false;
   render();
@@ -493,14 +669,14 @@ function simCodeContent(step) {
   if (step === 0) {
     return `<div class="sim-idle">
       <div class="sim-idle-icon">◈</div>
-      <p class="sim-idle-text">Click <strong>Run Simulation</strong> to watch an autonomous agent discover the business, hit HTTP 402, pay $0.50 USDC on Base Sepolia, and receive a structured booking confirmation.</p>
+      <p class="sim-idle-text">The storyboard previews the agent journey. Use Live proof mode below for real API calls, fresh IDs, and dashboard state changes.</p>
     </div>`;
   }
   const blocks = [];
 
   if (step >= 1) blocks.push(simBlock('01 · DISCOVER', 'get',
-`GET /.well-known/agentpay.json HTTP/1.1
-Host: agentpay.io
+`GET /api/agent/business-profile HTTP/1.1
+Host: d2pc20oig2383p.cloudfront.net
 Accept: application/json
 
 ──── Response ────────────────────────────────
@@ -520,8 +696,8 @@ Content-Type: application/json
     "paid": [
       {
         "action":   "hold_slot",
-        "endpoint": "POST /api/bookings/hold",
-        "price":    "0.50 USDC",
+        "endpoint": "/api/paid/hold-slot",
+        "price":    "$0.50",
         "network":  "eip155:84532",
         "protocol": "x402"
       }
@@ -530,8 +706,8 @@ Content-Type: application/json
 }`));
 
   if (step >= 2) blocks.push(simBlock('02 · REQUEST ACTION', 'post',
-`POST /api/bookings/hold HTTP/1.1
-Host: agentpay.io
+`POST /api/paid/hold-slot HTTP/1.1
+Host: d2pc20oig2383p.cloudfront.net
 Content-Type: application/json
 Accept: application/json
 
@@ -550,7 +726,7 @@ X-402-Version: 2
 {
   "x402Version": 2,
   "error":       "Payment required to complete this action",
-  "resource":    "POST /api/bookings/hold",
+  "resource":    "POST /api/paid/hold-slot",
   "accepts": [
     {
       "protocol":          "x402",
@@ -566,8 +742,8 @@ X-402-Version: 2
 }`));
 
   if (step >= 4) blocks.push(simBlock('04 · PAY — Agent signs x402 and retries', 'pay',
-`POST /api/bookings/hold HTTP/1.1
-Host: agentpay.io
+`POST /api/paid/hold-slot HTTP/1.1
+Host: d2pc20oig2383p.cloudfront.net
 Content-Type: application/json
 X-PAYMENT: eyJ4NDAyVmVyc2lvbiI6MiwicmVzb3VyY2Ui...
 
@@ -666,8 +842,8 @@ function landingPage() {
 
         <div>
           <p class="eyebrow">EasyA Consensus Miami 2026 · Agentic Track</p>
-          <h1>Turn any local business into a payable API endpoint.</h1>
-          <p class="hero-copy">AgentPay gives local businesses an AI front desk for humans and a machine-readable payment flow for autonomous agents. Questions are free. Real actions are paid, verified, and returned as structured API responses.</p>
+          <h1>Turn any SME into a payable API endpoint.</h1>
+          <p class="hero-copy">In the old internet, businesses needed websites. In the agentic internet, businesses need payable endpoints. AgentPay turns Miami Elite Auto Detail into a machine-readable service endpoint where questions are free and real appointment holds require x402 payment.</p>
           <div class="hero-actions">
             <a class="primary" href="#/simulator">Open API Simulator</a>
             <a class="secondary" href="#/chat">Try Customer Chat</a>
@@ -770,7 +946,7 @@ function landingPage() {
           <p>Autonomous agents discover, qualify, and pay in a single request cycle — no registration, no OAuth, no session management required.</p>
         </div>
         <div class="card">
-          <div class="metric">$5</div>
+          <div class="metric">$0.50</div>
           <h3>Demo payment amount</h3>
           <p>A $0.50 USDC deposit gates the priority appointment hold on <span class="mono" style="font-size:0.85em">POST /api/paid/hold-slot</span>, paid, verified, and confirmed in the same round trip.</p>
         </div>
@@ -842,7 +1018,7 @@ function landingPage() {
           In the old internet, businesses needed <em>websites.</em><br>
           In the agentic internet, businesses need <em>payable endpoints.</em>
         </blockquote>
-        <p>AgentPay Receptionist gives every local business an AI front desk that humans and autonomous agents can pay over HTTP using x402.</p>
+        <p>This is not just a chatbot. Miami Elite Auto Detail is now a local business with a machine-readable, payment-enabled API.</p>
       </div>
     </section>
   `;
@@ -989,7 +1165,7 @@ function chatPage() {
               <span class="intake-card-title">Paid action</span>
               ${state.pendingPaidAction ? '<span class="chip amber">Payment required</span>' : '<span class="chip blue">Listening</span>'}
             </div>
-            <div style="padding: 14px;" class="stack">
+            <div class="intake-scroll-body paid-action-scroll stack">
               ${state.pendingPaidAction ? `
                 <div class="paid-action-card-v2">
                   <div class="pac-header">
@@ -1025,10 +1201,10 @@ function chatPage() {
             <div class="intake-card-header">
               <span class="intake-card-title">Receptionist decision</span>
             </div>
-            <div style="background:#020810; border-radius:0 0 var(--radius-md) var(--radius-md); overflow:hidden;">
+            <div class="decision-scroll-shell">
               ${state.lastChatDecision
-                ? `<pre style="margin:0;padding:16px;background:none;color:#7dd3fc;font-size:0.72rem;max-height:200px;overflow:auto;line-height:1.65;">${escapeHtml(pretty(state.lastChatDecision))}</pre>`
-                : `<pre style="margin:0;padding:16px;background:none;color:rgba(255,255,255,0.18);font-size:0.72rem;">// Structured decision appears after the next message</pre>`
+                ? `<pre class="decision-pre">${escapeHtml(pretty(state.lastChatDecision))}</pre>`
+                : `<pre class="decision-pre empty-decision">// Structured decision appears after the next message</pre>`
               }
             </div>
           </div>
@@ -1038,7 +1214,7 @@ function chatPage() {
             <div class="intake-card-header">
               <span class="intake-card-title">x402 protocol timeline</span>
             </div>
-            <div style="padding:14px;">
+            <div class="intake-scroll-body timeline-scroll">
               ${timelineMarkup()}
             </div>
           </div>
@@ -1084,8 +1260,8 @@ function simulatorPage() {
   const disabled = state.busy ? 'disabled' : '';
 
   const SIM_STEPS = [
-    { num: '01', label: 'Discover',          desc: 'Fetch business manifest — /.well-known/agentpay.json' },
-    { num: '02', label: 'Request action',    desc: 'POST /api/bookings/hold — no payment header' },
+    { num: '01', label: 'Discover',          desc: 'Fetch business profile — /api/agent/business-profile' },
+    { num: '02', label: 'Request action',    desc: 'POST /api/paid/hold-slot — no payment header' },
     { num: '03', label: 'Payment required',  desc: 'HTTP/1.1 402 · x402 payment spec returned' },
     { num: '04', label: 'Pay',               desc: 'Agent signs X-PAYMENT header and retries' },
     { num: '05', label: 'Verify',            desc: 'Lambda@Edge verifies USDC on Base Sepolia' },
@@ -1099,7 +1275,7 @@ function simulatorPage() {
     return '';
   }
 
-  const btnLabel = state.simRunning ? '⬤ Running…' : state.simStep === 6 ? '↺ Run again' : '▶  Run Simulation';
+  const btnLabel = state.simRunning ? '⬤ Running…' : state.simStep === 6 ? '↺ Run storyboard' : '▶  Run storyboard';
   const statusPill = state.simStep === 6
     ? '<span class="status-pill live">Booking confirmed</span>'
     : state.simStep === 3
@@ -1116,7 +1292,7 @@ function simulatorPage() {
       <div style="width: min(860px, calc(100% - 36px)); margin: 0 auto;">
         <p class="eyebrow">API Simulator · Autonomous Agent · Base Sepolia · x402 v2</p>
         <h1 class="sim-hero-title">Watch an agent pay for a real-world action.</h1>
-        <p class="sim-hero-copy">An autonomous agent discovers Miami Elite Auto Detail, requests a booking hold, hits HTTP 402, pays $0.50 USDC via x402, and receives a structured booking confirmation — no checkout page, no form, no human.</p>
+        <p class="sim-hero-copy">This is Miami Elite Auto Detail. An AI agent discovers what the business offers for free. When it tries to hold a real appointment slot, AWS CloudFront returns HTTP 402. The agent pays $0.50 USDC over x402 on Base Sepolia, then the backend creates a booking lead and the dashboard updates.</p>
         <div style="display:flex; align-items:center; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
           <button class="run-sim-btn" type="button" data-run-sim ${state.simRunning ? 'disabled' : ''}>${btnLabel}</button>
           ${state.simStep > 0 && !state.simRunning ? `<button class="secondary" type="button" data-reset-sim style="height:54px; padding:0 22px;">Reset</button>` : ''}
@@ -1144,7 +1320,7 @@ function simulatorPage() {
             <div class="sim-product-dot"></div>
             <div class="sim-product-dot"></div>
           </div>
-          <span class="sim-product-title">agent · miami-elite-auto-detail · x402 v2 · Base Sepolia</span>
+          <span class="sim-product-title">guided storyboard · miami-elite-auto-detail · x402 v2 · Base Sepolia</span>
           <div>${statusPill}</div>
         </div>
 
@@ -1187,7 +1363,7 @@ function simulatorPage() {
           <!-- API Console -->
           <div class="sim-console-col">
             <div class="sim-console-topbar">
-              <span class="sim-console-tab">API Console</span>
+              <span class="sim-console-tab">Storyboard console</span>
               <span style="flex:1;"></span>
               <span style="font-family:var(--font-mono); font-size:0.66rem; color:var(--on-dark-subtle);">${state.simStep}/6 steps</span>
             </div>
@@ -1224,9 +1400,9 @@ function simulatorPage() {
 
       <!-- Interactive manual mode -->
       <div class="section-header" style="margin-top:72px;">
-        <p class="eyebrow">Interactive mode</p>
-        <h2>Step through manually with your wallet</h2>
-        <p>Connect a Base Sepolia wallet to trigger the live x402 payment flow against the real API endpoint.</p>
+        <p class="eyebrow">Live proof mode</p>
+        <h2>Prove it with real state changes</h2>
+        <p>The buttons below call the deployed API. The evidence board updates from live 402 responses, paid-action receipts, and dashboard records.</p>
       </div>
 
       <div class="sim-layout">
@@ -1238,6 +1414,14 @@ function simulatorPage() {
             </div>
             <div class="panel-body stack">
               <div class="runbook">
+                <button class="runbook-step step-primary" type="button" data-demo-agent-buyer ${disabled}>
+                  <span class="runbook-num">GO</span>
+                  <span class="runbook-label">
+                    <strong>Run one-click agent buyer</strong>
+                    <small>Server agent discovers, receives 402, pays x402, and creates the lead</small>
+                  </span>
+                  <span class="method-badge pay">LIVE</span>
+                </button>
                 <button class="runbook-step" type="button" data-discover ${disabled}>
                   <span class="runbook-num">01</span>
                   <span class="runbook-label">
@@ -1257,8 +1441,8 @@ function simulatorPage() {
                 <button class="runbook-step step-primary" type="button" data-paid-hold ${disabled}>
                   <span class="runbook-num">03</span>
                   <span class="runbook-label">
-                    <strong>Sign x402 and book</strong>
-                    <small>Pay $0.50 USDC, verify on-chain, receive booking JSON</small>
+                    <strong>Advanced: browser wallet x402</strong>
+                    <small>Use an injected wallet instead of the server-side demo buyer</small>
                   </span>
                   <span class="method-badge pay">USDC</span>
                 </button>
@@ -1267,14 +1451,15 @@ function simulatorPage() {
               ${showSuccessMoment()}
               ${showBuyerNotice()}
               <div class="agent-cli">
-                <strong>Autonomous agent buyer CLI</strong>
-                <code>${escapeHtml(AGENT_BUYER_COMMAND)}</code>
+                <strong>No terminal needed during judging</strong>
+                <code>POST /api/demo/agent-buyer -> calls CloudFront /api/paid/hold-slot -> pays with x402</code>
               </div>
               ${technicalPanels()}
             </div>
           </div>
         </div>
         <div class="stack">
+          ${proofEvidenceMarkup()}
           <div class="panel">
             <div class="panel-header">
               <h3>Paid capabilities</h3>
@@ -1305,7 +1490,7 @@ function dashboardPage() {
   const hasLiveData = state.leads.length > 0 || state.payments.length > 0;
   const metricPaidActions = hasLiveData ? state.payments.length : 12;
   const metricLeads = hasLiveData ? state.leads.length : 8;
-  const metricRevenueValue = hasLiveData ? '$' + (state.payments.length * 5) : '$60';
+  const metricRevenueValue = hasLiveData ? '$' + (state.payments.length * 0.5).toFixed(2) : '$6';
   const metricPending = hasLiveData ? state.leads.length : 3; // demo: 3 of 4 DEMO_BOOKINGS are non-booked (captured, awaiting, confirm)
 
   const DEMO_BOOKINGS = [
@@ -1400,7 +1585,7 @@ function dashboardPage() {
     {
       time: '10:42 AM',
       title: 'HTTP 402 issued',
-      desc: 'Agent requested POST /api/bookings/hold for 4:30 PM slot.',
+      desc: 'Agent requested POST /api/paid/hold-slot for 4:30 PM slot.',
       badge: 'http-402',
       badgeLabel: 'Payment required',
     },
@@ -1987,6 +2172,9 @@ function bindEvents() {
   document.querySelectorAll('[data-paid-hold]').forEach((button) => {
     button.addEventListener('click', () => attemptHoldSlot(true));
   });
+  document.querySelectorAll('[data-demo-agent-buyer]').forEach((button) => {
+    button.addEventListener('click', runServerDemoBuyer);
+  });
   document.querySelectorAll('[data-refresh-dashboard]').forEach((button) => {
     button.addEventListener('click', () => loadDashboard(true));
   });
@@ -2037,14 +2225,15 @@ window.addEventListener('hashchange', async () => {
     state.responseJson = null;
     state.buyerNotice = null;
     state.timeline = [];
+    state.lastPaymentRequirement = null;
   }
-  if (state.route === '/dashboard') await loadDashboard(false);
+  if (state.route === '/dashboard' || state.route === '/simulator') await loadDashboard(false);
   render();
 });
 
 async function boot() {
   state.route = routeFromHash();
-  if (state.route === '/dashboard') await loadDashboard(false);
+  if (state.route === '/dashboard' || state.route === '/simulator') await loadDashboard(false);
   render();
 }
 

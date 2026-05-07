@@ -393,6 +393,57 @@ async function attemptHoldSlot(withPayment) {
   }
 }
 
+async function runServerDemoBuyer() {
+  setBusy(true);
+  state.buyerNotice = null;
+  state.lastPaymentRequirement = null;
+  state.timeline = ['REQUEST_RECEIVED'];
+  state.requestJson = {
+    actor: 'server_side_autonomous_agent',
+    method: 'POST',
+    path: '/api/demo/agent-buyer',
+    headers: { 'content-type': 'application/json' },
+    body: {
+      baseUrl: window.location.origin,
+      action: 'hold_priority_slot',
+      note: 'Server uses the configured throwaway Base Sepolia buyer key; no key is sent from the browser.',
+    },
+  };
+
+  try {
+    const result = await api('/api/demo/agent-buyer', {
+      method: 'POST',
+      body: JSON.stringify({ baseUrl: window.location.origin, action: 'hold_priority_slot' }),
+    });
+    state.lastHttpStatus = result.status;
+    state.responseJson = result.body;
+    state.profile = result.body?.profile || state.profile;
+    state.lastPaymentRequirement = result.body?.unpaidPaymentRequirement || null;
+
+    if (result.ok && result.body?.success) {
+      setTimelineFromResponse(result.body.booking || result.body);
+      state.buyerNotice = 'One-click agent buyer completed: 402 captured, x402 payment verified, booking lead created.';
+      await loadDashboard(false);
+      return;
+    }
+
+    if (result.body?.configured === false) {
+      state.buyerNotice = 'The one-click buyer endpoint is deployed, but DEMO_BUYER_PRIVATE_KEY is not configured yet.';
+    } else {
+      state.timeline = result.body?.unpaidStatus === 402
+        ? ['REQUEST_RECEIVED', 'PAYMENT_REQUIRED_402']
+        : ['REQUEST_RECEIVED'];
+      state.buyerNotice = result.body?.error || 'The server-side demo buyer returned an error.';
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    state.buyerNotice = message;
+    state.responseJson = { error: message };
+  } finally {
+    setBusy(false);
+  }
+}
+
 async function createBrowserX402PaymentHeader(paymentRequired) {
   if (!paymentRequired || paymentRequired.x402Version !== 2 || !paymentRequired.accepts?.length) {
     throw new Error('The 402 response did not include v2 x402 payment requirements.');
@@ -1114,7 +1165,7 @@ function chatPage() {
               <span class="intake-card-title">Paid action</span>
               ${state.pendingPaidAction ? '<span class="chip amber">Payment required</span>' : '<span class="chip blue">Listening</span>'}
             </div>
-            <div style="padding: 14px;" class="stack">
+            <div class="intake-scroll-body paid-action-scroll stack">
               ${state.pendingPaidAction ? `
                 <div class="paid-action-card-v2">
                   <div class="pac-header">
@@ -1150,10 +1201,10 @@ function chatPage() {
             <div class="intake-card-header">
               <span class="intake-card-title">Receptionist decision</span>
             </div>
-            <div style="background:#020810; border-radius:0 0 var(--radius-md) var(--radius-md); overflow:hidden;">
+            <div class="decision-scroll-shell">
               ${state.lastChatDecision
-                ? `<pre style="margin:0;padding:16px;background:none;color:#7dd3fc;font-size:0.72rem;max-height:200px;overflow:auto;line-height:1.65;">${escapeHtml(pretty(state.lastChatDecision))}</pre>`
-                : `<pre style="margin:0;padding:16px;background:none;color:rgba(255,255,255,0.18);font-size:0.72rem;">// Structured decision appears after the next message</pre>`
+                ? `<pre class="decision-pre">${escapeHtml(pretty(state.lastChatDecision))}</pre>`
+                : `<pre class="decision-pre empty-decision">// Structured decision appears after the next message</pre>`
               }
             </div>
           </div>
@@ -1163,7 +1214,7 @@ function chatPage() {
             <div class="intake-card-header">
               <span class="intake-card-title">x402 protocol timeline</span>
             </div>
-            <div style="padding:14px;">
+            <div class="intake-scroll-body timeline-scroll">
               ${timelineMarkup()}
             </div>
           </div>
@@ -1363,6 +1414,14 @@ function simulatorPage() {
             </div>
             <div class="panel-body stack">
               <div class="runbook">
+                <button class="runbook-step step-primary" type="button" data-demo-agent-buyer ${disabled}>
+                  <span class="runbook-num">GO</span>
+                  <span class="runbook-label">
+                    <strong>Run one-click agent buyer</strong>
+                    <small>Server agent discovers, receives 402, pays x402, and creates the lead</small>
+                  </span>
+                  <span class="method-badge pay">LIVE</span>
+                </button>
                 <button class="runbook-step" type="button" data-discover ${disabled}>
                   <span class="runbook-num">01</span>
                   <span class="runbook-label">
@@ -1382,8 +1441,8 @@ function simulatorPage() {
                 <button class="runbook-step step-primary" type="button" data-paid-hold ${disabled}>
                   <span class="runbook-num">03</span>
                   <span class="runbook-label">
-                    <strong>Sign x402 and book</strong>
-                    <small>Pay $0.50 USDC, verify on-chain, receive booking JSON</small>
+                    <strong>Advanced: browser wallet x402</strong>
+                    <small>Use an injected wallet instead of the server-side demo buyer</small>
                   </span>
                   <span class="method-badge pay">USDC</span>
                 </button>
@@ -1392,8 +1451,8 @@ function simulatorPage() {
               ${showSuccessMoment()}
               ${showBuyerNotice()}
               <div class="agent-cli">
-                <strong>Autonomous agent buyer CLI</strong>
-                <code>${escapeHtml(AGENT_BUYER_COMMAND)}</code>
+                <strong>No terminal needed during judging</strong>
+                <code>POST /api/demo/agent-buyer -> calls CloudFront /api/paid/hold-slot -> pays with x402</code>
               </div>
               ${technicalPanels()}
             </div>
@@ -2112,6 +2171,9 @@ function bindEvents() {
   });
   document.querySelectorAll('[data-paid-hold]').forEach((button) => {
     button.addEventListener('click', () => attemptHoldSlot(true));
+  });
+  document.querySelectorAll('[data-demo-agent-buyer]').forEach((button) => {
+    button.addEventListener('click', runServerDemoBuyer);
   });
   document.querySelectorAll('[data-refresh-dashboard]').forEach((button) => {
     button.addEventListener('click', () => loadDashboard(true));

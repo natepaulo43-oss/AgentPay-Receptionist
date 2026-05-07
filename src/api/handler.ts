@@ -2,6 +2,7 @@ import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { businessProfile } from './businessProfile';
 import { chatResponseFor, enforceChatRateLimit, parseConversationHistory } from './chat';
 import { BUSINESS_NAME, NETWORK, PAYMENT_PROTOCOL, TABLE_NAME, nowIso } from './config';
+import { handleDemoAgentBuyer } from './demoBuyer';
 import { isAllowedOrigin, json, lowerHeaders, parseJsonBody, stringField } from './http';
 import { handleHoldSlot, handlePaidStub } from './paidActions';
 import { getStoredLeads, getStoredPayments, resetStoredData } from './storage';
@@ -43,6 +44,10 @@ async function route(event: APIGatewayProxyEvent, origin?: string): Promise<APIG
       message,
       conversationHistory: parseConversationHistory(body.conversationHistory),
     }), origin);
+  }
+
+  if (path === '/api/demo/agent-buyer' && method === 'POST') {
+    return handleDemoAgentBuyer(event, origin);
   }
 
   if (path === '/api/paid/hold-slot' && method === 'POST') {

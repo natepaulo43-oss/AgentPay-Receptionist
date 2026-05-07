@@ -12,7 +12,7 @@ const demoPayload = {
   service: 'Same-day ceramic detail',
   request: 'Hold a same-day ceramic detail appointment at 4:30 PM.',
   appointmentTime: '2026-05-05T16:30:00-04:00',
-  transcriptSnippet: 'Test agent accepted the $5 x402 priority hold.',
+  transcriptSnippet: 'Test agent accepted the $0.50 x402 priority hold.',
 };
 
 test('GET /api/agent/business-profile exposes free and paid capabilities', async () => {
@@ -107,6 +107,15 @@ test('edge-verified hold-slot creates booking JSON plus dashboard lead and payme
   assert.equal(payments.statusCode, 200);
   assert.equal(payments.body.payments.length, 1);
   assert.ok(payments.body.events.some((event) => event.status === 'LEAD_CREATED'));
+});
+
+test('POST /api/demo/agent-buyer is safe when the demo buyer key is not configured', async () => {
+  const response = await callApi('/api/demo/agent-buyer', 'POST', {
+    baseUrl: 'https://d2pc20oig2383p.cloudfront.net',
+  });
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.body.success, false);
+  assert.equal(response.body.configured, false);
 });
 
 test('POST /api/dashboard/reset clears demo data', async () => {

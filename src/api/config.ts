@@ -5,6 +5,8 @@ export const NETWORK_LABEL = NETWORK === 'eip155:8453' ? 'Base Mainnet' : 'Base 
 export const PAYMENT_PROTOCOL = 'x402';
 export const PAY_TO_ADDRESS =
   process.env.PAY_TO_ADDRESS ?? '0x0000000000000000000000000000000000000402';
+export const DEMO_BUYER_PRIVATE_KEY = process.env.DEMO_BUYER_PRIVATE_KEY ?? '';
+export const AGENTPAY_PUBLIC_BASE_URL = process.env.AGENTPAY_PUBLIC_BASE_URL ?? '';
 export const TABLE_NAME = process.env.AGENTPAY_TABLE_NAME ?? process.env.TABLE_NAME;
 export const ALLOW_UNVERIFIED_PAYMENT_HEADERS =
   process.env.AGENTPAY_ALLOW_UNVERIFIED_PAYMENT_HEADERS === 'true';
