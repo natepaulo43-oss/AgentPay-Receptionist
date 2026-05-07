@@ -1,88 +1,97 @@
 # AgentPay Receptionist
 
-**The AI receptionist that agents can pay.**
+> AgentPay gives local businesses a payment-gated AI receptionist to help autonomous AI agents discover and book services with x402 HTTP payments.
 
-AgentPay Receptionist turns a local service business into an AI-powered, machine-readable, payment-enabled service endpoint. Humans and autonomous AI agents can ask free questions, discover services, request quotes, and pay USDC over HTTP for premium actions such as holding an appointment slot.
+AgentPay Receptionist turns any local service business into a payable HTTP endpoint — discoverable by humans and callable by autonomous AI agents, settled in USDC via the x402 protocol.
 
-This hackathon MVP uses the AWS x402 CloudFront/WAF sample as the infrastructure blueprint, adapted from content monetization to paid business-action monetization. Instead of protecting `/articles/**`, the judged flow protects `POST /api/paid/hold-slot`.
+---
 
-## Codebase Layout
+## The Problem
 
-This folder is the cleaned AgentPay project. The original imported AWS sample can stay nearby as reference, but it is not needed to run this app.
+AI agents are getting better at searching, reasoning, and planning — but they still cannot transact with real-world local businesses. Local businesses have websites and phone numbers, but not a machine-readable capability catalog that agents can parse, a standard protocol for paying for scarce actions like appointment holds or priority quotes, or any way to see which leads came from autonomous agents and were pre-paid.
 
-```text
-frontend/                  Four-page browser demo
-demo/local-server.mjs       Local development server and mock API
-src/api/handler.ts          AWS Lambda origin API router
-src/api/businessProfile.ts  Free machine-readable capability catalog
-src/api/chat.ts             Deterministic receptionist flow
-src/api/paidActions.ts      x402-gated hold-slot and paid-action handlers
-src/api/storage.ts          Memory/DynamoDB lead and payment-event storage
-src/edge/                   Lambda@Edge x402 verification and settlement
-src/waf-sync/               SSM route config to AWS WAF rule sync
-scripts/agent-pay-hold-slot.mjs
-                            Real @x402/fetch autonomous buyer flow
-tests/api.test.mjs          Tiny API route test suite
-src/deploy/static-content/  CloudFormation custom resource for frontend upload
-config/default-routes.json  Free and paid route pricing
-template.yaml               Clean SAM deployment template
-```
+---
 
-## Why It Matters
+## What We Built
 
-AI agents can search and reason, but they still struggle to transact with real-world local businesses. Local businesses have websites, forms, and phone numbers, but not payable APIs that agents can discover, understand, and use.
+AgentPay Receptionist turns a local business into a payable API endpoint that humans and AI agents can both use. The demo is **Miami Elite Auto Detail**. Humans chat with the AI receptionist for free. When they want to actually hold an appointment slot, they pay a small USDC fee. An autonomous AI agent can do the exact same thing in code: discover what the business offers, hit the paid endpoint, get an HTTP 402 back, pay automatically using x402, and receive a booking confirmation as JSON. No human needed on either end.
 
-AgentPay Receptionist gives the business:
+AgentPay Receptionist gives every local business three things:
 
-- A free AI front desk for informational questions.
-- A free machine-readable business profile for autonomous agents.
-- x402-paid action endpoints for scarce or valuable business actions.
-- A dashboard that shows paid leads, payment status, transcript snippets, and x402 event logs.
+1. **An AI front desk for humans** — a chat interface that greets customers, answers questions for free, qualifies their service needs, and offers to hold a priority appointment slot once the request is real.
+2. **A machine-readable API for autonomous agents** — `GET /api/agent/business-profile` returns a structured capability catalog with free capabilities, paid capabilities, input schemas, prices, and x402 payment parameters. An agent knows exactly what to call next with zero human integration work.
+3. **A business owner dashboard** — live paid leads, payment status per action, and a full x402 event timeline from `REQUEST_RECEIVED → PAYMENT_REQUIRED_402 → PAYMENT_VERIFIED → LEAD_CREATED`.
 
-## Judge-Ready Thesis
+The MVP demo is **Miami Elite Auto Detail**. A human or AI agent asks for a same-day ceramic coating appointment, the AI receptionist qualifies the request, the agent hits `POST /api/paid/hold-slot`, receives `HTTP 402 Payment Required`, pays `$0.50 USDC` on Base Sepolia using `@x402/fetch`, and receives a structured booking confirmation. The paid lead appears on the dashboard instantly.
 
-In the old internet, businesses needed websites. In the agentic internet, businesses need payable endpoints.
+---
 
-AgentPay Receptionist is not a chatbot with a payment button. It is a local-business capability server:
+## How We Used Coinbase x402
 
-- Agents discover what the business can do through `GET /api/agent/business-profile`.
-- Free questions and qualification stay free.
-- Paid business actions live under `/api/paid/**`.
-- `POST /api/paid/hold-slot` proves the key pattern: HTTP request, `402 Payment Required`, x402 payment, verified action, dashboard lead.
+x402 is Coinbase's open protocol that puts payments directly into HTTP using the long-dormant 402 status code. Any server can declare a price, any client that speaks x402 pays automatically. That's what makes it perfect for agents — there's no wallet UI, no OAuth, no custom integration required.
 
-The demo should be understandable in under 60 seconds:
+We used three packages from the x402 SDK. `@x402/core` handles payment verification and settlement on the server side. `@x402/evm` provides the EVM payment scheme for USDC on Base. And `@x402/fetch` wraps the standard fetch API so when our agent script hits a 402 response, it automatically signs the payment and retries. The entire agent buyer CLI is about 75 lines of code because the protocol handles everything.
 
-1. Open **Agent API Simulator**.
-2. Click **Discover profile** to show the machine-readable endpoint.
-3. Click **Attempt hold** to show HTTP 402 and x402 payment requirements.
-4. Click **Sign x402 and book** or run the agent buyer CLI.
-5. Open **Dashboard** to show the paid lead and event log.
+Payments use the exact scheme with USDC on Base Sepolia at $0.50 per slot hold. Exact scheme means a fixed price, no slippage, straight USDC transfer. Switching to Base mainnet is one config change, no code touched. We support both the x402.org testnet facilitator for the demo and the Coinbase CDP facilitator for production.
 
-## Demo Business
+The key architectural choice was putting `x402HTTPResourceServer` inside AWS Lambda@Edge rather than the application API. Unpaid requests get rejected at CloudFront before they ever reach our origin. The business API never sees an unauthorized call on a paid route.
 
-The MVP business is **Miami Elite Auto Detail**.
+---
 
-Demo story:
+## How We Used AWS
 
-1. A customer or autonomous agent asks for a same-day ceramic detail appointment.
-2. The AI receptionist asks a qualifying question and offers a **4:30 PM priority appointment hold**.
-3. Holding the slot requires a **$0.50 USDC deposit**.
-4. The app attempts `POST /api/paid/hold-slot` without payment.
-5. AWS CloudFront/WAF/Lambda@Edge returns **HTTP 402 Payment Required**.
-6. The client retries with x402 payment information.
-7. The backend creates a booking/lead record.
-8. The dashboard updates with the paid lead and x402 event timeline.
+The whole stack is one AWS SAM deployment. CloudFront serves the frontend from a private S3 bucket and routes all API traffic through Lambda@Edge before hitting API Gateway. AWS WAF Bot Control labels agent vs. human traffic and injects per-route pricing headers that Lambda@Edge reads to decide what's free and what's paid.
 
-The UI shows the required timeline statuses:
+Route pricing lives in SSM Parameter Store and syncs into a WAF custom rule group every five minutes via a scheduled Lambda. Changing a price or adding a new paid route is two AWS CLI calls with no redeployment needed.
 
-- `REQUEST_RECEIVED`
-- `PAYMENT_REQUIRED_402`
-- `PAYMENT_SIGNATURE_RECEIVED`
-- `PAYMENT_VERIFIED`
-- `ACTION_COMPLETED`
-- `LEAD_CREATED`
+The origin API runs on API Gateway and Lambda, handles all the business logic, and writes leads and payment records to DynamoDB. The verify-then-settle flow is split across two Lambda@Edge functions: origin-request verifies the payment signature before the request reaches the API, origin-response settles the payment only after the API returns a successful 200. Payment without delivery and delivery without payment are both impossible by design.
 
-## Architecture
+The whole infrastructure pattern is adapted directly from the [AWS sample-x402-content-monetization-with-cloudfront-and-waf](https://github.com/coinbase/x402/tree/main/examples/typescript/servers/cloudfront-lambda-edge) reference, but repurposed from protecting static content to protecting live API actions.
+
+---
+
+## Why This Combination Worked
+
+Lambda@Edge and x402 are a natural fit because x402's server abstraction is stateless enough to run inside a CDN function. That's what makes the zero-trust payment gate possible at the infrastructure layer without touching application code. `@x402/fetch` is what makes the agent demo tangible: you can run a single script, watch a real USDC transfer happen on Base Sepolia, and see the paid lead appear in the dashboard immediately. And `GET /api/agent/business-profile` is the discovery primitive that makes the whole thing work: one GET request returns everything an agent needs to transact with the business, including endpoint paths, input schemas, prices, and x402 payment parameters.
+
+---
+
+## Blockchain Interaction
+
+**Chain:** Base Sepolia (`eip155:84532`) for the demo — Base mainnet (`eip155:8453`) for production. One SSM parameter change, no code touched.
+
+**Token:** Native USDC on Base. Fixed amounts using the x402 `exact` scheme — no slippage, no approximation, straight USDC transfer.
+
+**Payment flow step by step:**
+
+1. The agent (or `@x402/fetch`) POSTs to `/api/paid/hold-slot` with no payment header. Lambda@Edge reads the route price from the WAF-injected header (sourced from SSM) and returns `HTTP 402` with a `PAYMENT-REQUIRED` header encoding the price (`0.50`), USDC asset address, network (`eip155:84532`), `payTo` wallet address, and scheme (`exact`).
+
+2. `@x402/fetch` receives the 402. `ExactEvmScheme` constructs a signed payment authorization using `privateKeyToAccount` and `toClientEvmSigner` from viem. The signature is attached as a `payment-signature` header and the request is retried automatically.
+
+3. Lambda@Edge origin-request intercepts the retry. It sends the `payment-signature` to the facilitator (x402.org on testnet, Coinbase CDP at `api.cdp.coinbase.com/platform/v2/x402` on mainnet) for verification. On success, the pending settlement data is base64-encoded into an internal `x-x402-pending-settlement` header and the request passes through to the API.
+
+4. The API creates the booking and returns `200`. Lambda@Edge origin-response reads the pending settlement header and calls `processSettlement()` — this is where the actual on-chain USDC transfer executes via the facilitator. Settlement only happens after a successful `200`, making payment-without-delivery and delivery-without-payment both impossible by construction.
+
+5. The facilitator returns a transaction hash. The `x-payment-response` header is added to the response and decoded by the client. The paid lead appears in the dashboard.
+
+**No direct contract calls in application code.** The x402 facilitator handles on-chain execution. The application code only signs payment authorizations (client side) and calls `processHTTPRequest` / `processSettlement` on `x402HTTPResourceServer` (server side).
+
+---
+
+## Technical Description
+
+### SDKs and Packages Used
+
+| Package | Version | Role |
+|---|---|---|
+| `@x402/core` | `^2.3.0` | x402 v2 protocol types, `encodePaymentRequiredHeader`, `x402HTTPResourceServer` server abstraction |
+| `@x402/evm` | `^2.3.0` | `ExactEvmScheme` and `toClientEvmSigner` — EVM-native USDC payment signing |
+| `@x402/fetch` | `^2.3.0` | `wrapFetchWithPaymentFromConfig` — autonomous agent buyer with automatic 402→sign→retry |
+| `viem` | `^2.39.3` | `privateKeyToAccount` for test wallet, low-level EVM signing primitives |
+| `jose` | `^6.1.3` | JWT handling for Coinbase CDP facilitator authentication |
+| AWS SDK v3 (`@aws-sdk/client-*`) | `^3.985.0` | CloudFront, WAF, Lambda, DynamoDB, SSM, Secrets Manager, CloudWatch |
+
+### Architecture
 
 ```mermaid
 graph LR
@@ -95,7 +104,7 @@ graph LR
     EdgeReq -->|missing/invalid payment| Pay402["HTTP 402<br/>Payment Required"]
     API --> Storage["DynamoDB<br/>Leads, PaidActions, PaymentEvents"]
     API --> Dashboard["Business dashboard"]
-    EdgeReq --> Facilitator["x402 Facilitator<br/>x402.org testnet or CDP"]
+    EdgeReq --> Facilitator["x402 Facilitator<br/>x402.org testnet or Coinbase CDP"]
     EdgeRes["Lambda@Edge<br/>x402 settle"] --> Facilitator
     API --> EdgeRes
 
@@ -104,77 +113,87 @@ graph LR
     Logs["CloudWatch<br/>payment and WAF logs"] -.-> Dashboard
 ```
 
-Production-style request path:
+**Request path:**
 
 ```text
 Frontend
-  -> AWS CloudFront / WAF
-  -> x402 payment gate for /api/paid/**
-  -> API Gateway / Lambda origin API
-  -> AI receptionist logic + DynamoDB storage
+  → AWS CloudFront / WAF (injects route pricing headers)
+  → Lambda@Edge origin-request (x402 verify)
+  → API Gateway / Lambda (receptionist logic + DynamoDB)
+  → Lambda@Edge origin-response (x402 settle)
+  → Client receives booking JSON + x-payment-response header
 ```
 
-## AWS Usage
+### AWS Infrastructure
 
-This project keeps AWS as the visible hackathon infrastructure layer:
+| Service | Role |
+|---|---|
+| CloudFront | Serves frontend static assets; routes `/api/*` to origin Lambda |
+| AWS WAF Bot Control | Labels agent vs. human traffic; injects per-route pricing headers from SSM |
+| Lambda@Edge (origin-request) | Verifies x402 payment signatures before paid requests reach the API |
+| Lambda@Edge (origin-response) | Settles verified payments after successful API responses |
+| API Gateway + Lambda | Hosts receptionist API routes (`/api/chat`, `/api/agent/business-profile`, `/api/paid/**`, `/api/dashboard/**`) |
+| DynamoDB | Single-table store: `Business`, `PaidAction`, `Lead`, `PaymentEvent` |
+| SSM Parameter Store | Runtime route pricing config, network, pay-to address, facilitator URL |
+| Secrets Manager | CDP facilitator credentials for Coinbase production integration |
+| CloudWatch | Payment and WAF event logs; business dashboard widgets |
 
-- **CloudFront** serves the frontend and routes `/api/*` to the origin API.
-- **AWS WAF Bot Control** labels traffic and injects route pricing headers from SSM route config.
-- **Lambda@Edge origin-request** verifies x402 payments before paid requests reach the API.
-- **Lambda@Edge origin-response** settles verified payments after successful origin responses.
-- **API Gateway + Lambda** host the receptionist API routes.
-- **DynamoDB** stores leads, paid actions, and payment events.
-- **SSM Parameter Store** stores route config, network, pay-to address, and facilitator URL.
-- **Secrets Manager** stores CDP facilitator credentials when using Coinbase CDP.
-- **CloudWatch** provides logs and dashboard widgets for payment and WAF activity.
+---
 
-## x402 Usage
+## Demo: 60-Second Judge Flow
 
-Paid routes are fixed-price x402 actions using:
+**Demo business: Miami Elite Auto Detail** — ceramic coating and detailing · Miami, Florida
 
-- Scheme: `exact`
-- Currency: `USDC`
-- Demo network: `eip155:84532` Base Sepolia
-- Production-ready network: `eip155:8453` Base mainnet
-- Pay-to address: `PAY_TO_ADDRESS` / `PayToAddress`
-- Protected resource description: `Hold a priority appointment slot with a local business receptionist.`
+1. Open **Agent API Simulator** → click **Discover profile** — see the machine-readable capability catalog with `freeCapabilities`, `paidCapabilities`, input schemas, and x402 payment parameters.
+2. Click **Attempt hold** — observe `HTTP 402 Payment Required` with a `Payment-Required` header encoding price, asset, network, and `payTo` address.
+3. Click **Sign x402 and book** (or run `npm run agent:pay`) — payment is verified by Lambda@Edge, slot is held, structured booking JSON is returned.
+4. Open **Dashboard** — the paid lead and full x402 event timeline appear instantly.
 
-Facilitator options:
+x402 payment timeline shown in the UI:
 
-- `x402.org` facilitator: fastest for testnet demos on Base Sepolia.
-- `cdp` facilitator: Coinbase Developer Platform production path for testnet and mainnet, with credentials stored in Secrets Manager.
+| Status | Description |
+|---|---|
+| `REQUEST_RECEIVED` | Initial unpaid request hits the API endpoint |
+| `PAYMENT_REQUIRED_402` | HTTP 402 returned with x402 payment requirements |
+| `PAYMENT_SIGNATURE_RECEIVED` | x402 payment signature attached on retry |
+| `PAYMENT_VERIFIED` | Lambda@Edge verified signature with the facilitator |
+| `ACTION_COMPLETED` | Origin API created the booking record |
+| `LEAD_CREATED` | Paid lead visible in the business dashboard |
+
+---
 
 ## Pages
 
-1. **Landing**: polished product explanation and architecture summary.
-2. **Customer Chat Demo**: human talks to the AI receptionist and triggers the paid hold-slot action.
-3. **Agent API Simulator**: autonomous agent discovers the business profile, sees paid capabilities, attempts a paid action, receives 402, pays, and receives structured booking JSON.
-4. **Business Dashboard**: paid leads, payment status, transcript snippets, booking details, and x402 event logs.
+1. **Home** — product overview, architecture summary, and live protocol status tags.
+2. **Chat Demo** — human-facing AI receptionist; triggers the paid hold-slot flow via natural conversation.
+3. **Agent API Simulator** — step-by-step autonomous agent demo: discover → HTTP 402 → pay → structured booking JSON. This is the primary judging surface.
+4. **Business Dashboard** — paid leads, payment status, booking details, and x402 event logs. Includes a demo reset button for clean judging runs.
+5. **Use Cases** — Miami Elite Auto Detail case study with service catalog and live endpoint status.
 
-The Agent API Simulator is the key agentic demo surface.
+---
 
 ## API Routes
 
-Free routes:
+**Free routes**
 
 | Method | Route | Purpose |
 |---|---|---|
 | `GET` | `/api/health` | Health check |
-| `GET` | `/api/agent/business-profile` | Machine-readable business profile and capability catalog |
-| `POST` | `/api/chat` | Free receptionist chat and lead qualification |
-| `GET` | `/api/dashboard/leads` | Business dashboard leads |
-| `GET` | `/api/dashboard/payments` | Business dashboard payment actions and event logs |
-| `POST` | `/api/dashboard/reset` | Clear demo leads, payments, and event logs for clean judging runs |
+| `GET` | `/api/agent/business-profile` | Machine-readable capability catalog for agent discovery |
+| `POST` | `/api/chat` | Free AI receptionist chat and lead qualification |
+| `GET` | `/api/dashboard/leads` | Paid leads list |
+| `GET` | `/api/dashboard/payments` | Payment actions and x402 event logs |
+| `POST` | `/api/dashboard/reset` | Reset demo state for clean judging runs |
 
-Paid routes:
+**Paid routes (x402-gated at Lambda@Edge)**
 
 | Method | Route | Price | Status |
 |---|---|---:|---|
-| `POST` | `/api/paid/hold-slot` | `$0.50` USDC | Fully implemented |
-| `POST` | `/api/paid/quote-request` | `$1.00` USDC | Configured roadmap stub |
-| `POST` | `/api/paid/priority-callback` | `$2.00` USDC | Configured roadmap stub |
+| `POST` | `/api/paid/hold-slot` | `$0.50 USDC` | Fully implemented |
+| `POST` | `/api/paid/quote-request` | `$1.00 USDC` | Roadmap stub |
+| `POST` | `/api/paid/priority-callback` | `$2.00 USDC` | Roadmap stub |
 
-Successful hold-slot response:
+**Successful `hold-slot` response**
 
 ```json
 {
@@ -191,35 +210,54 @@ Successful hold-slot response:
 }
 ```
 
-## Local Demo
+---
 
-The local demo uses a small Node server with the same frontend and mock API behavior. The main browser payment path creates a real x402 payment payload with an injected wallet. For autonomous-agent testing, the CLI buyer uses `@x402/fetch` to receive HTTP 402 and retry with an x402 payment header.
-
-Local mode accepts a signed x402 header so you can exercise the UI without live settlement. Live verification and settlement happen in the AWS CloudFront/Lambda@Edge deployment.
-
-```bash
-npm run dev:demo
-```
-
-Open:
+## Codebase Layout
 
 ```text
-http://127.0.0.1:8787
+frontend/                        Hash-routed four-page browser SPA
+demo/local-server.mjs            Local dev server + mock API (mirrors AWS behavior)
+src/api/handler.ts               AWS Lambda origin API router
+src/api/businessProfile.ts       Free machine-readable capability catalog
+src/api/chat.ts                  Deterministic AI receptionist flow
+src/api/paidActions.ts           x402-gated hold-slot and paid-action handlers
+src/api/storage.ts               In-memory / DynamoDB lead and payment-event storage
+src/edge/shared/                 x402 middleware, CloudFront adapters, config loader
+src/edge/origin-request/         Lambda@Edge payment verification handler
+src/edge/origin-response/        Lambda@Edge payment settlement handler
+src/waf-sync/                    SSM route config → AWS WAF rule sync
+scripts/agent-pay-hold-slot.mjs  Autonomous agent buyer CLI (uses @x402/fetch)
+tests/api.test.mjs               API route test suite
+config/default-routes.json       Free and paid route pricing
+template.yaml                    AWS SAM deployment template
 ```
 
-Useful local checks:
+---
+
+## Local Demo
 
 ```bash
+npm install
+npm run dev:demo
+# Open http://127.0.0.1:8787
+```
+
+Useful checks:
+
+```bash
+# Machine-readable business profile
 curl -s http://127.0.0.1:8787/api/agent/business-profile | jq
 
+# Trigger HTTP 402
 curl -i -X POST http://127.0.0.1:8787/api/paid/hold-slot \
   -H 'content-type: application/json' \
   -d '{"service":"Same-day ceramic detail"}'
 
+# Reset demo state
 curl -s -X POST http://127.0.0.1:8787/api/dashboard/reset | jq
 ```
 
-Real agent buyer flow:
+Autonomous agent buyer (real `@x402/fetch` flow):
 
 ```bash
 X402_BUYER_PRIVATE_KEY=0x... \
@@ -227,29 +265,23 @@ AGENTPAY_BASE_URL=http://127.0.0.1:8787 \
 npm run agent:pay
 ```
 
+Local mode accepts a signed x402 header to exercise the full UI flow without live settlement. Live verification and settlement run inside the AWS CloudFront/Lambda@Edge deployment.
+
+---
+
 ## AWS Deploy
 
-Prerequisites:
-
-- AWS account with permissions for CloudFront, WAF, Lambda@Edge, API Gateway, DynamoDB, S3, SSM, Secrets Manager, CloudWatch, and IAM.
-- AWS SAM CLI.
-- Node.js 24+.
-- Ethereum address to receive USDC payments.
-
-Deploy:
+**Prerequisites:** AWS account, SAM CLI, Node.js 24+, Ethereum address for USDC receipts.
 
 ```bash
 npm install
 npm test
 npm run sam:build
 
-PAY_TO_ADDRESS=0xaA49663fe49b18736240bfF80898e72Fd33d8ab6 \
-npm run sam:deploy:live
+PAY_TO_ADDRESS=0x... npm run sam:deploy:live
 ```
 
-`npm run sam:deploy:live` intentionally deploys the SAM stack first, then writes
-`config/default-routes.json` directly to SSM and invokes the WAF sync Lambda.
-This avoids SAM CLI shorthand parsing issues with raw JSON parameter values.
+`npm run sam:deploy:live` deploys the SAM stack, then writes `config/default-routes.json` directly to SSM and invokes the WAF sync Lambda. This avoids SAM CLI shorthand parsing issues with raw JSON parameter values.
 
 Key SAM parameters:
 
@@ -257,31 +289,14 @@ Key SAM parameters:
 |---|---|---|
 | `PayToAddress` | Wallet address receiving USDC | Required |
 | `Network` | `eip155:84532` Base Sepolia or `eip155:8453` Base mainnet | `eip155:84532` |
-| `FacilitatorType` | `x402.org` or `cdp` | `x402.org` |
+| `FacilitatorType` | `x402.org` or `cdp` (Coinbase) | `x402.org` |
 | `CdpApiKeyName` | CDP key name for Coinbase facilitator | Empty |
 | `CdpApiKeyPrivateKey` | CDP private key for Coinbase facilitator | Empty |
 | `RouteConfigJson` | Free and paid route pricing config | AgentPay defaults |
 
-Stack outputs include:
+Stack outputs: `FrontendUrl`, `BusinessApiOriginUrl`, `AgentPayTableName`, `CloudWatchDashboardUrl`, SSM config parameter paths.
 
-- `FrontendUrl`
-- `BusinessApiOriginUrl`
-- `AgentPayTableName`
-- `CloudWatchDashboardUrl`
-- SSM config parameter paths
-
-## Route Configuration
-
-The default config makes discovery/chat/dashboard routes free and paid actions chargeable:
-
-```json
-{
-  "pattern": "/api/paid/hold-slot",
-  "policies": [{ "condition": "default", "action": "0.50" }]
-}
-```
-
-Update pricing without redeploying:
+### Update pricing without redeploying
 
 ```bash
 ROUTE_CONFIG_JSON=$(node -e 'process.stdout.write(JSON.stringify(require("./config/default-routes.json")))')
@@ -289,40 +304,40 @@ ROUTE_CONFIG_JSON=$(node -e 'process.stdout.write(JSON.stringify(require("./conf
 aws ssm put-parameter \
   --name "/x402-edge/agentpay-receptionist/config/routes" \
   --value "$ROUTE_CONFIG_JSON" \
-  --type String \
-  --overwrite
+  --type String --overwrite
 
 aws lambda invoke \
   --function-name agentpay-receptionist-waf-sync \
-  --region us-east-1 \
-  /tmp/agentpay-waf-sync-response.json
+  --region us-east-1 /tmp/agentpay-waf-sync-response.json
 ```
+
+---
 
 ## AI Receptionist Behavior
 
-The MVP uses a deterministic but structured receptionist flow for demo reliability:
+- Greets as the AI front desk — not a human, not a generic chatbot.
+- Answers informational questions for free.
+- Qualifies service type and vehicle before offering a paid hold.
+- Offers a 4:30 PM priority slot for same-day ceramic detail requests.
+- Requires payment only when reserving real business capacity.
+- Returns structured chat fields: `reply`, `intent`, `confidence`, `actionBoundary`, `requiresPayment`, `paidAction`, `suggestedNextStep`, `agentInstructions`, `leadFields`.
 
-- Greets as the AI front desk, not a human.
-- Answers normal informational questions for free.
-- Asks one qualifying question at a time.
-- Offers a 4:30 PM priority hold for same-day ceramic detail requests.
-- Requires payment only for appointment holds, verified quote requests, and priority callbacks.
-- Returns structured chat fields: `reply`, `intent`, `confidence`, `actionBoundary`, `requiresPayment`, `paidAction`, `suggestedNextStep`, `agentInstructions`, and `leadFields`.
+Deterministic flow for demo reliability — ready for optional LLM polish. The judged payment path does not depend on a live model call.
 
-The code avoids a fake-feeling “yes means pay” shortcut. It qualifies service and vehicle first, then only marks payment required when the user or agent explicitly asks to reserve capacity.
-
-The code is ready for optional LLM polish, but the judged payment flow does not depend on a live model call.
+---
 
 ## Data Model
 
-DynamoDB stores a single-table model:
+DynamoDB single-table:
 
-- `Business`
-- `PaidAction`
-- `Lead`
-- `PaymentEvent`
+- `Business` — business profile and configuration
+- `PaidAction` — each x402-paid action with amount, currency, network, and payment status
+- `Lead` — customer/agent booking record linked to a paid action
+- `PaymentEvent` — full event timeline per action (six statuses from request to lead creation)
 
-The local demo uses an in-memory mock store. The AWS deployment writes leads, paid actions, and payment events to DynamoDB.
+The local demo uses an in-memory mock store with identical behavior.
+
+---
 
 ## Tests
 
@@ -330,7 +345,9 @@ The local demo uses an in-memory mock store. The AWS deployment writes leads, pa
 npm test
 ```
 
-The test suite covers `/api/chat`, `/api/agent/business-profile`, unpaid and paid `/api/paid/hold-slot`, dashboard reads, and demo reset.
+Covers: `/api/chat`, `/api/agent/business-profile`, unpaid `hold-slot` (expects 402), paid `hold-slot` (expects booking JSON), dashboard reads, and demo reset.
+
+---
 
 ## Roadmap
 
@@ -338,9 +355,13 @@ The test suite covers `/api/chat`, `/api/agent/business-profile`, unpaid and pai
 - Wallet funding/status UX and richer agent SDK examples.
 - Rich quote-request and priority-callback paid actions.
 - Business owner authentication and CRM export.
-- OpenAPI/AI plugin manifest generation for agent discovery.
-- Mainnet Base deployment using Coinbase CDP Facilitator.
+- `/.well-known/agentpay.json` discovery manifest for open agent indexing.
+- Base mainnet deployment using Coinbase CDP Facilitator.
 
-## Final Pitch
+---
 
-In the old internet, businesses needed websites. In the agentic internet, businesses need payable endpoints. AgentPay Receptionist gives every local business an AI front desk that humans and autonomous agents can pay over HTTP using x402.
+## Pitch
+
+> In the old internet, businesses needed websites. In the agentic internet, businesses need payable endpoints.
+
+AgentPay Receptionist gives every local business an AI front desk that humans and autonomous agents can pay over HTTP using x402 — no custom integration, no wallet UI, no middleware to write.
