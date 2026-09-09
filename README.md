@@ -24,6 +24,7 @@ AWS (CloudFront, Lambda@Edge, API Gateway, DynamoDB, WAF Bot Control, SSM, Secre
 
 ## Demo
 
+- Live demo: https://d2pc20oig2383p.cloudfront.net/#/
 - Demo video: https://screenapp.io/app/v/GjHYXQEYcm
 - Full technical write-up (architecture, payment flow, API routes, deploy instructions): [TECHNICAL_WRITEUP.md](TECHNICAL_WRITEUP.md)
 
